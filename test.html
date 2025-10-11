@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Supabase Test</title>
+  </head>
+  <body>
+    <h1>Supabase Connection Test</h1>
+    <pre id="out">Running…</pre>
+
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+      // ⬇️ REPLACE these with your values
+      const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
+      const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      async function run() {
+        // try reading first 5 rows from the joined view
+        const { data, error } = await supabase
+          .from("programs_view")
+          .select("program_id, university_name, name, track, gre_required, toefl_min_total")
+          .limit(5);
+
+        const out = document.getElementById("out");
+        if (error) {
+          out.textContent = "Error:\n" + JSON.stringify(error, null, 2);
+        } else {
+          out.textContent = "Success! Sample rows:\n\n" + JSON.stringify(data, null, 2);
+        }
+      }
+
+      run();
+    </script>
+  </body>
+</html>
