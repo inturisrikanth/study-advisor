@@ -2,103 +2,109 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Study Advisor – Sign in / Sign up</title>
+  <title>Study Advisor — Sign In / Sign Up</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, Arial, sans-serif; max-width: 720px; margin: 8vh auto; padding: 0 16px; }
-    .card { border:1px solid #e5e5e5; border-radius:12px; padding:20px; box-shadow:0 2px 6px rgba(0,0,0,.05); }
-    h1 { margin:0 0 12px; }
-    .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-    .full { grid-column: 1 / -1; }
-    input, button { padding:10px; font-size:15px; }
-    button { cursor:pointer; }
-    .muted { color:#666; font-size: 14px; }
-    .spacer { height: 10px; }
+    body { font-family: system-ui, Arial, sans-serif; max-width: 480px; margin: 10vh auto; padding: 0 16px; }
+    .card { border:1px solid #e5e5e5; border-radius:12px; padding:22px; box-shadow:0 2px 6px rgba(0,0,0,.05); margin-bottom:20px; }
+    h2 { margin-top:0; }
+    input, button { padding:10px; font-size:16px; width:100%; box-sizing:border-box; }
+    button { cursor:pointer; margin-top:8px; }
+    .muted { color:#666; font-size:14px; margin-top:8px; }
+    a { color:#0a58ca; text-decoration:none; }
+    a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Study Advisor</h1>
-    <p class="muted">Create an account once with your name, email & password. Next time, just sign in.</p>
+    <h2>Create Account</h2>
+    <input id="su_first" placeholder="First name" />
+    <input id="su_last" placeholder="Last name" style="margin-top:8px;" />
+    <input id="su_email" placeholder="Email" type="email" style="margin-top:8px;" />
+    <input id="su_pass" placeholder="Password" type="password" style="margin-top:8px;" />
+    <button id="signupBtn">Sign Up</button>
+    <div id="signupMsg" class="muted"></div>
+  </div>
 
-    <h3>Create account</h3>
-    <div class="row">
-      <input id="su_first" type="text" placeholder="First name" />
-      <input id="su_last"  type="text" placeholder="Last name" />
-      <input id="su_email" class="full" type="email" placeholder="you@example.com" />
-      <input id="su_pass"  class="full" type="password" placeholder="Create password (min 8 chars)" />
-      <button id="signupBtn" class="full">Sign up</button>
+  <div class="card">
+    <h2>Sign In</h2>
+    <input id="si_email" placeholder="Email" type="email" />
+    <input id="si_pass" placeholder="Password" type="password" style="margin-top:8px;" />
+    <button id="signinBtn">Sign In</button>
+    <div id="signinMsg" class="muted"></div>
+    <div class="muted" style="margin-top:10px;">
+      <a href="#" id="forgotBtn">Forgot password?</a>
     </div>
-
-    <div class="spacer"></div>
-    <h3>Sign in</h3>
-    <div class="row">
-      <input id="si_email" class="full" type="email" placeholder="you@example.com" />
-      <input id="si_pass"  class="full" type="password" placeholder="Your password" />
-      <button id="signinBtn" class="full">Sign in</button>
-    </div>
-
-    <div class="spacer"></div>
-    <button id="forgotBtn">Forgot password?</button>
-
-    <div id="msg" class="muted" style="margin-top:10px;"></div>
   </div>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+    // ⬇️ Replace these values
     const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
     const APP_URL = "https://inturisrikanth.github.io/study-advisor/app.html";
+    const RESET_URL = "https://inturisrikanth.github.io/study-advisor/reset.html";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const msg = (t) => document.getElementById("msg").textContent = t;
 
-    // If already signed in, go to dashboard
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) location.href = APP_URL;
-    })();
+    const sm = (el, msg) => (document.getElementById(el).textContent = msg || "");
 
-    // Sign up (email + password) + store names in user metadata
+    // ----- Sign Up -----
     document.getElementById("signupBtn").onclick = async () => {
+      sm("signupMsg", "");
       const first = document.getElementById("su_first").value.trim();
-      const last  = document.getElementById("su_last").value.trim();
+      const last = document.getElementById("su_last").value.trim();
       const email = document.getElementById("su_email").value.trim();
-      const pass  = document.getElementById("su_pass").value;
+      const pass = document.getElementById("su_pass").value.trim();
 
-      if (!first || !last) return msg("Please enter first and last name.");
-      if (!email || !pass) return msg("Please enter email and password.");
+      if (!first || !last || !email || !pass)
+        return sm("signupMsg", "All fields are required.");
 
       const { error } = await supabase.auth.signUp({
-        email, password: pass,
+        email,
+        password: pass,
         options: {
-          emailRedirectTo: APP_URL,            // after confirm, go to dashboard
-          data: { first_name: first, last_name: last } // saved in auth user metadata
-        }
+          data: { first_name: first, last_name: last },
+          emailRedirectTo: APP_URL,
+        },
       });
 
-      msg(error ? error.message : "Check your email to confirm your account.");
+      if (error) sm("signupMsg", "❌ " + error.message);
+      else {
+        sm("signupMsg", "✅ Account created! Check your email to confirm before signing in.");
+        document.getElementById("su_first").value =
+          document.getElementById("su_last").value =
+          document.getElementById("su_email").value =
+          document.getElementById("su_pass").value = "";
+      }
     };
 
-    // Sign in (email + password)
+    // ----- Sign In -----
     document.getElementById("signinBtn").onclick = async () => {
+      sm("signinMsg", "");
       const email = document.getElementById("si_email").value.trim();
-      const pass  = document.getElementById("si_pass").value;
-      if (!email || !pass) return msg("Enter email and password.");
+      const pass = document.getElementById("si_pass").value.trim();
+      if (!email || !pass)
+        return sm("signinMsg", "Email and password are required.");
+
       const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) return msg(error.message);
-      location.href = APP_URL;
+      if (error) sm("signinMsg", "❌ " + error.message);
+      else {
+        sm("signinMsg", "✅ Login successful. Redirecting…");
+        setTimeout(() => (location.href = APP_URL), 500);
+      }
     };
 
-    // Forgot password
-    document.getElementById("forgotBtn").onclick = async () => {
+    // ----- Forgot Password -----
+    document.getElementById("forgotBtn").onclick = async (e) => {
+      e.preventDefault();
       const email = prompt("Enter your account email:");
       if (!email) return;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: APP_URL
+        redirectTo: RESET_URL,
       });
-      msg(error ? error.message : "Password reset email sent.");
+      sm("signinMsg", error ? "❌ " + error.message : "📩 Password reset email sent. Please check your inbox.");
     };
   </script>
 </body>
