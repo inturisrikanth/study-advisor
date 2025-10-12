@@ -1,0 +1,16 @@
+﻿program_id,university_id,name,degree_level,track,program_url,cip_code,stem,opt_months,tuition_usd_per_year,gre_required,gre_min_total,english_tests_accepted,toefl_min_total,ielts_min_total,duolingo_min_total,pte_min_total,notes,source_url,last_verified
+asu-mscs,asu,MS Computer Science,MS,CS,https://example.edu/asu/mscs,,Y,36,36000,optional,300,TOEFL|IELTS|Duolingo|PTE,80,6.5,110,58,Sample data for setup,https://example.edu/asu/mscs/admissions,2025-10-11
+asu-msds,asu,MS Data Science,MS,Data,https://example.edu/asu/msds,,Y,36,37000,optional,300,TOEFL|IELTS|Duolingo|PTE,83,6.5,115,59,Sample data for setup,https://example.edu/asu/msds/admissions,2025-10-11
+asu-msai,asu,MS Artificial Intelligence,MS,AI,https://example.edu/asu/msai,,Y,36,38000,required,305,TOEFL|IELTS|Duolingo,90,6.5,115,,Sample data for setup,https://example.edu/asu/msai/admissions,2025-10-11
+asu-mscyber,asu,MS Cybersecurity,MS,Cyber,https://example.edu/asu/mscyber,,Y,36,38000,optional,300,TOEFL|IELTS|Duolingo|PTE,85,6.5,110,58,Sample data for setup,https://example.edu/asu/mscyber/admissions,2025-10-11
+neu-msds,neu,MS Data Science,MS,Data,https://example.edu/neu/msds,,Y,36,41000,required,305,TOEFL|IELTS,90,6.5,,,Sample data for setup,https://example.edu/neu/msds/admissions,2025-10-11
+neu-mscs,neu,MS Computer Science,MS,CS,https://example.edu/neu/mscs,,Y,36,42000,optional,300,TOEFL|IELTS|Duolingo,92,6.5,120,,Sample data for setup,https://example.edu/neu/mscs/admissions,2025-10-11
+utd-msit,utd,MS Information Technology,MS,IT,https://example.edu/utd/msit,,Y,36,32000,optional,300,TOEFL|IELTS|Duolingo|PTE,80,6.5,105,58,Sample data for setup,https://example.edu/utd/msit/admissions,2025-10-11
+utd-msse,utd,MS Software Engineering,MS,SE,https://example.edu/utd/msse,,Y,36,33000,optional,300,TOEFL|IELTS|Duolingo,80,6.5,105,,Sample data for setup,https://example.edu/utd/msse/admissions,2025-10-11
+sjsu-mscs,sjsu,MS Computer Science,MS,CS,https://example.edu/sjsu/mscs,,Y,36,30000,optional,300,TOEFL|IELTS|Duolingo,80,6.5,110,,Sample data for setup,https://example.edu/sjsu/mscs/admissions,2025-10-11
+ub-mscs,ub,MS Computer Science,MS,CS,https://example.edu/ub/mscs,,Y,36,31000,required,305,TOEFL|IELTS,90,6.5,,,Sample data for setup,https://example.edu/ub/mscs/admissions,2025-10-11
+ncsu-mscs,ncsu,MS Computer Science,MS,CS,https://example.edu/ncsu/mscs,,Y,36,35000,optional,300,TOEFL|IELTS|Duolingo,85,6.5,115,,Sample data for setup,https://example.edu/ncsu/mscs/admissions,2025-10-11
+gmu-mscyber,gmu,MS Cybersecurity,MS,Cyber,https://example.edu/gmu/mscyber,,Y,36,29000,optional,300,TOEFL|IELTS|Duolingo|PTE,80,6.5,105,58,Sample data for setup,https://example.edu/gmu/mscyber/admissions,2025-10-11
+tamu-mscs,tamu,MS Computer Science,MS,CS,https://example.edu/tamu/mscs,,Y,36,34000,required,308,TOEFL|IELTS,90,6.5,,,Sample data for setup,https://example.edu/tamu/mscs/admissions,2025-10-11
+rutg-msis,rutg,MS Information Systems,MS,IS,https://example.edu/rutg/msis,,Y,36,35500,optional,300,TOEFL|IELTS|Duolingo,80,6.5,110,,Sample data for setup,https://example.edu/rutg/msis/admissions,2025-10-11
+uic-msnet,uic,MS Computer Networks,MS,Networks,https://example.edu/uic/msnet,,Y,36,31500,optional,300,TOEFL|IELTS|Duolingo,80,6.5,105,,Sample data for setup,https://example.edu/uic/msnet/admissions,2025-10-11

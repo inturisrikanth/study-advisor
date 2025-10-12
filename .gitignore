@@ -1,1 +1,10 @@
 #.DS_Store
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# build & deps
+node_modules
+.next
+out
