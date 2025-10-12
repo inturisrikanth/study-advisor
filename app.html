@@ -81,40 +81,54 @@
     <script type="module">
       import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-      // ⬇️ REPLACE these with your real values
+      // ⬇️ Replace these with your real values
       const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
       const LANDING_URL = "https://inturisrikanth.github.io/study-advisor/"; // trailing slash
 
-      // Create a single Supabase client
+      // Single Supabase client
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       // ---------- Auth gate + profile bootstrap ----------
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Not signed in: go to landing
-        location.href = LANDING_URL;
+        location.href = LANDING_URL; // not signed in → go to landing
         throw new Error("Not signed in");
       }
 
-      // Ensure a profile row exists (creates on first visit)
+      // 1) Ensure a profile row exists
       await supabase
         .from("profiles")
         .upsert({ user_id: user.id, email: user.email }, { onConflict: "user_id" });
 
-      // Load profile
+      // 2) Load profile
       let { data: profile } = await supabase
         .from("profiles")
-        .select("username, is_admin")
+        .select("username, is_admin, first_name, last_name")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // Prompt for username once
+      // 3) 🔹 Tiny tweak: copy names from auth metadata (from sign-up) if missing
+      const metaFirst = user.user_metadata?.first_name || null;
+      const metaLast  = user.user_metadata?.last_name || null;
+      if ((!profile?.first_name || !profile?.last_name) && (metaFirst || metaLast)) {
+        await supabase
+          .from("profiles")
+          .update({ first_name: metaFirst, last_name: metaLast })
+          .eq("user_id", user.id);
+        ({ data: profile } = await supabase
+          .from("profiles")
+          .select("username, is_admin, first_name, last_name")
+          .eq("user_id", user.id)
+          .maybeSingle());
+      }
+
+      // 4) First-time username prompt (optional public handle)
       if (!profile || !profile.username) {
         let saved = false;
         while (!saved) {
           const u = prompt("Choose a username (letters/numbers/._-):");
-          if (!u) break; // skip if canceled
+          if (!u) break; // user canceled
           const { error } = await supabase
             .from("profiles")
             .update({ username: u })
@@ -128,17 +142,22 @@
         }
       }
 
-      // Show identity
-      document.getElementById("whoami").textContent =
-        profile?.username ? `@${profile.username}` : (user.email || "Signed in");
+      // 5) Show identity in header (Full Name preferred, else @username, else email)
+      const headerName =
+        (profile?.first_name || profile?.last_name)
+          ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
+          : (profile?.username ? `@${profile.username}` : (user.email || "Signed in"));
 
-      // Logout
+      document.getElementById("whoami").innerHTML = headerName +
+        (profile?.is_admin ? ' · <span style="border:1px solid #bbb;border-radius:999px;padding:2px 8px;font-size:12px;">Admin</span>' : '');
+
+      // 6) Logout
       document.getElementById("logoutBtn").addEventListener("click", async () => {
         await supabase.auth.signOut();
         location.href = LANDING_URL;
       });
 
-      // ---------- Finder logic (uses the same supabase client) ----------
+      // ---------- Finder logic ----------
       const el = (id) => document.getElementById(id);
 
       function buildFilters() {
