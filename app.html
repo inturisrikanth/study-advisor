@@ -101,14 +101,14 @@
         .from("profiles")
         .upsert({ user_id: user.id, email: user.email }, { onConflict: "user_id" });
 
-      // 2) Load profile
+      // 2) Load profile (names + admin only)
       let { data: profile } = await supabase
         .from("profiles")
-        .select("username, is_admin, first_name, last_name")
+        .select("is_admin, first_name, last_name")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // 3) 🔹 Tiny tweak: copy names from auth metadata (from sign-up) if missing
+      // 3) Copy names from auth metadata once if missing
       const metaFirst = user.user_metadata?.first_name || null;
       const metaLast  = user.user_metadata?.last_name || null;
       if ((!profile?.first_name || !profile?.last_name) && (metaFirst || metaLast)) {
@@ -118,40 +118,21 @@
           .eq("user_id", user.id);
         ({ data: profile } = await supabase
           .from("profiles")
-          .select("username, is_admin, first_name, last_name")
+          .select("is_admin, first_name, last_name")
           .eq("user_id", user.id)
           .maybeSingle());
       }
 
-      // 4) First-time username prompt (optional public handle)
-      if (!profile || !profile.username) {
-        let saved = false;
-        while (!saved) {
-          const u = prompt("Choose a username (letters/numbers/._-):");
-          if (!u) break; // user canceled
-          const { error } = await supabase
-            .from("profiles")
-            .update({ username: u })
-            .eq("user_id", user.id);
-          if (!error) {
-            profile = { ...(profile || {}), username: u };
-            saved = true;
-          } else {
-            alert(error.message); // e.g., duplicate username
-          }
-        }
-      }
-
-      // 5) Show identity in header (Full Name preferred, else @username, else email)
+      // 4) Show identity in header (Full Name preferred, else email)
       const headerName =
         (profile?.first_name || profile?.last_name)
           ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
-          : (profile?.username ? `@${profile.username}` : (user.email || "Signed in"));
+          : (user.email || "Signed in");
 
       document.getElementById("whoami").innerHTML = headerName +
         (profile?.is_admin ? ' · <span style="border:1px solid #bbb;border-radius:999px;padding:2px 8px;font-size:12px;">Admin</span>' : '');
 
-      // 6) Logout
+      // 5) Logout
       document.getElementById("logoutBtn").addEventListener("click", async () => {
         await supabase.auth.signOut();
         location.href = LANDING_URL;
