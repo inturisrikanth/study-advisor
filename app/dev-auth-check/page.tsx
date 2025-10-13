@@ -3,6 +3,15 @@
 import { useEffect, useState } from 'react';
 import { supabaseClient } from '../../lib/supabaseClient';
 
+import { notFound } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+if (process.env.NODE_ENV === 'production') {
+  notFound();
+}
+
 if (process.env.NODE_ENV !== 'development') {
   throw new Error('Not available outside development');
 }
