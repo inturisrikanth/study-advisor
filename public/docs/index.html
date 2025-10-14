@@ -5,42 +5,279 @@
   <title>Study Advisor — Sign In / Sign Up</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, Arial, sans-serif; max-width: 480px; margin: 10vh auto; padding: 0 16px; }
-    .card { border:1px solid #e5e5e5; border-radius:12px; padding:22px; box-shadow:0 2px 6px rgba(0,0,0,.05); margin-bottom:20px; }
-    h2 { margin-top:0; }
-    input, button { padding:10px; font-size:16px; width:100%; box-sizing:border-box; }
-    button { cursor:pointer; margin-top:8px; }
-    .muted { color:#666; font-size:14px; margin-top:8px; }
-    a { color:#0a58ca; text-decoration:none; }
-    a:hover { text-decoration:underline; }
+    :root{
+      --bg1:#f7f9ff;
+      --bg2:#eef3ff;
+      --bg3:#fdfcff;
+      --card:#ffffffcc;          /* glass: a bit transparent */
+      --panel:#ffffff;
+      --text:#141a27;
+      --muted:#667085;
+      --primary:#0a58ca;
+      --primary-dark:#094daa;
+      --success:#198754;
+      --border:#e6e8f0;
+      --shadow: 0 20px 50px rgba(24,39,75,.08);
+      --radius:16px;
+      --hero-url: url("https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?q=80&w=1400&auto=format&fit=crop"); /* campus walkway — swap if you like */
+    }
+
+    /* ====== Page background (gradient + noise) ====== */
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 600px at -10% -10%, #cfe0ff 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 0%, #ffd7f7 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2) 50%, var(--bg3));
+      position:relative;
+      overflow-x:hidden;
+    }
+    /* film grain */
+    body:after{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 100 100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0 .04 .08'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      opacity:.6;
+      mix-blend-mode:multiply;
+    }
+
+    /* ====== Layout ====== */
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:64px 20px;
+      min-height:100vh;
+      display:grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap:28px;
+      align-items:center;
+    }
+    @media (max-width: 980px){
+      .wrap{ grid-template-columns: 1fr; padding:32px 16px 48px; }
+    }
+
+    /* ====== Left hero/info ====== */
+    .info{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:26px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .hero{
+      position:relative;
+      height:220px;
+      border-radius:14px;
+      overflow:hidden;
+      background: #cfe0ff;
+      margin-bottom:18px;
+      box-shadow:0 12px 30px rgba(10,88,202,.15);
+    }
+    .hero:before{
+      content:"";
+      position:absolute; inset:0;
+      background-image: var(--hero-url);
+      background-size: cover; background-position:center;
+      transform: scale(1.02);
+      filter: saturate(1.05) contrast(1.03);
+    }
+    .hero:after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,0));
+    }
+    .kicker{
+      display:inline-block;
+      font-size:12px;
+      letter-spacing:.08em;
+      color:#3b82f6;
+      background:#eef5ff;
+      border:1px solid #dbe9ff;
+      padding:4px 10px;
+      border-radius:999px;
+      margin:6px 0 12px;
+    }
+    h1{ font-size:32px; line-height:1.15; margin:0 0 8px; }
+    .sub{ color:var(--muted); margin:0 0 14px; font-size:15px; }
+    table.benefits{
+      width:100%; border-collapse:collapse; background:#fff;
+      border:1px solid var(--border); border-radius:12px; overflow:hidden;
+    }
+    table.benefits td{ padding:10px 12px; vertical-align:top; font-size:14px; }
+    table.benefits tr+tr td{ border-top:1px dashed #eef0f4; }
+    .tick{ color:#16a34a; font-weight:700; }
+
+    .microflow{
+      margin-top:14px; font-size:14px; color:#475467;
+      background:#fcfdfd; border:1px solid var(--border);
+      border-radius:10px; padding:10px 12px;
+    }
+
+    /* ====== Right auth card (solid white) ====== */
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .tabs{ display:flex; border-bottom:1px solid var(--border); background:#f9fafb; }
+    .tab-btn{
+      flex:1; padding:16px 16px; text-align:center; cursor:pointer; border:none;
+      background:transparent; font-weight:600;
+    }
+    .tab-btn.active{ background:#fff; border-bottom:2px solid var(--primary); color:var(--primary); }
+    .panel{ padding:24px; display:none; }
+    .panel.active{ display:block; }
+
+    label{ display:block; font-size:13px; color:#475467; margin:12px 0 6px; }
+    input{
+      width:100%; padding:12px 12px; font-size:15px;
+      border:1px solid #d1d5db; border-radius:10px; outline:none;
+      background:#fff;
+    }
+    input:focus{ border-color:#9ab8f7; box-shadow:0 0 0 3px rgba(10,88,202,.12); }
+    .input-row{ position:relative; }
+    .toggle-pass{
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      font-size:12px; color:var(--primary); background:transparent; border:none; cursor:pointer;
+    }
+
+    .btn{
+      width:100%; padding:12px 14px; font-size:15px; border-radius:10px;
+      border:1px solid var(--primary); background:var(--primary); color:#fff; cursor:pointer;
+      transition:background .15s, border-color .15s, opacity .15s;
+      margin-top:12px;
+    }
+    .btn:hover{ background:var(--primary-dark); border-color:var(--primary-dark); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; }
+
+    .muted{ color:var(--muted); font-size:13px; }
+    a{ color:var(--primary); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    .forgot{ margin-top:8px; text-align:right; }
+    .msg{ margin-top:8px; min-height:18px; }
+    .footnote{ margin-top:10px; font-size:12px; color:#98a2b3; }
+
+    /* Tighter on mobile */
+    @media (max-width:540px){
+      h1{ font-size:26px; }
+      .hero{ height:160px; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Create Account</h2>
-    <input id="su_first" placeholder="First name" />
-    <input id="su_last" placeholder="Last name" style="margin-top:8px;" />
-    <input id="su_email" placeholder="Email" type="email" style="margin-top:8px;" />
-    <input id="su_pass" placeholder="Password" type="password" style="margin-top:8px;" />
-    <button id="signupBtn">Sign Up</button>
-    <div id="signupMsg" class="muted"></div>
-  </div>
+  <div class="wrap">
+    <!-- LEFT: Info/Marketing with hero image -->
+    <aside class="info">
+      <div class="hero" aria-hidden="true"></div>
+      <span class="kicker">Built for MS applicants</span>
+      <h1>Plan your applications in minutes — not weeks</h1>
+      <p class="sub">
+        Search programs across the US, save your shortlist, and generate polished
+        Statements of Purpose you can download as Word files.
+      </p>
 
-  <div class="card">
-    <h2>Sign In</h2>
-    <input id="si_email" placeholder="Email" type="email" />
-    <input id="si_pass" placeholder="Password" type="password" style="margin-top:8px;" />
-    <button id="signinBtn">Sign In</button>
-    <div id="signinMsg" class="muted"></div>
-    <div class="muted" style="margin-top:10px;">
-      <a href="#" id="forgotBtn">Forgot password?</a>
-    </div>
+      <table class="benefits" role="presentation">
+        <tr>
+          <td style="width:26px" class="tick">✓</td>
+          <td><strong>Complete US universities catalog</strong></td>
+          <td>Major MS programs (CS, DS, AI, Cyber, IS, SE, MBA) with GRE/TOEFL/IELTS/Duolingo and STEM OPT details.</td>
+        </tr>
+        <tr>
+          <td class="tick">✓</td>
+          <td><strong>Smart filters</strong></td>
+          <td>Minimum scores, GRE-optional toggle, STEM-only, program keyword.</td>
+        </tr>
+        <tr>
+          <td class="tick">✓</td>
+          <td><strong>Saved list</strong></td>
+          <td>Keep favorites and start an SOP from any saved program in one click.</td>
+        </tr>
+        <tr>
+          <td class="tick">✓</td>
+          <td><strong>Fast SOP generator</strong></td>
+          <td>Prefill university + program, add your details, and download a .doc.</td>
+        </tr>
+        <tr>
+          <td class="tick">✓</td>
+          <td><strong>Credit-based billing</strong></td>
+          <td>Pay only for what you generate; universities list stays free.</td>
+        </tr>
+        <tr>
+          <td class="tick">✓</td>
+          <td><strong>Private by default</strong></td>
+          <td>Your data stays with your account.</td>
+        </tr>
+      </table>
+
+      <div class="microflow">
+        <strong>How it works:</strong> Universities → Save → Generate SOP → Download → Apply 🎓
+      </div>
+    </aside>
+
+    <!-- RIGHT: Auth -->
+    <main class="card" role="form" aria-label="Authentication">
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" id="tab-signin" aria-controls="panel-signin" aria-selected="true" role="tab">Sign In</button>
+        <button class="tab-btn" id="tab-signup" aria-controls="panel-signup" aria-selected="false" role="tab">Create Account</button>
+      </div>
+
+      <!-- Sign In panel -->
+      <section class="panel active" id="panel-signin" role="tabpanel" aria-labelledby="tab-signin">
+        <label for="si_email">Email</label>
+        <input id="si_email" type="email" autocomplete="email" placeholder="you@example.com" />
+
+        <label for="si_pass">Password</label>
+        <div class="input-row">
+          <input id="si_pass" type="password" autocomplete="current-password" placeholder="••••••••" />
+          <button class="toggle-pass" type="button" data-target="si_pass">Show</button>
+        </div>
+
+        <button id="signinBtn" class="btn">Sign In</button>
+        <div class="forgot"><a href="#" id="forgotBtn">Forgot password?</a></div>
+        <span id="signinMsg" class="msg muted" aria-live="polite"></span>
+        <div class="footnote">
+          By continuing, you agree to our
+          <a href="/docs/terms.html" target="_blank" rel="noopener">Terms</a>
+          and
+          <a href="/docs/privacy.html" target="_blank" rel="noopener">Privacy</a>.
+        </div>
+      </section>
+
+      <!-- Sign Up panel -->
+      <section class="panel" id="panel-signup" role="tabpanel" aria-labelledby="tab-signup">
+        <label for="su_first">First name</label>
+        <input id="su_first" autocomplete="given-name" />
+
+        <label for="su_last">Last name</label>
+        <input id="su_last" autocomplete="family-name" />
+
+        <label for="su_email">Email</label>
+        <input id="su_email" type="email" autocomplete="email" placeholder="you@example.com" />
+
+        <label for="su_pass">Password</label>
+        <div class="input-row">
+          <input id="su_pass" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+          <button class="toggle-pass" type="button" data-target="su_pass">Show</button>
+        </div>
+
+        <button id="signupBtn" class="btn">Create Account</button>
+        <span id="signupMsg" class="msg muted" aria-live="polite"></span>
+        <div class="footnote">We’ll send a confirmation email. No spam.</div>
+      </section>
+    </main>
   </div>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // ⬇️ Replace these values
+    // ==== Supabase config (same as before) ====
     const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
 
@@ -49,58 +286,109 @@
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Helpers
+    const qs = (s) => document.querySelector(s);
     const sm = (el, msg) => (document.getElementById(el).textContent = msg || "");
+
+    // Tabs
+    const tabSignIn = qs("#tab-signin");
+    const tabSignUp = qs("#tab-signup");
+    const panelSignIn = qs("#panel-signin");
+    const panelSignUp = qs("#panel-signup");
+    function activate(tab){
+      const signin = tab === "in";
+      tabSignIn.classList.toggle("active", signin);
+      tabSignUp.classList.toggle("active", !signin);
+      panelSignIn.classList.toggle("active", signin);
+      panelSignUp.classList.toggle("active", !signin);
+      tabSignIn.setAttribute("aria-selected", String(signin));
+      tabSignUp.setAttribute("aria-selected", String(!signin));
+    }
+    tabSignIn.addEventListener("click", () => activate("in"));
+    tabSignUp.addEventListener("click", () => activate("up"));
+
+    // Show/Hide password
+    document.querySelectorAll(".toggle-pass").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const target = document.getElementById(btn.dataset.target);
+        if (!target) return;
+        const isPwd = target.type === "password";
+        target.type = isPwd ? "text" : "password";
+        btn.textContent = isPwd ? "Hide" : "Show";
+        target.focus();
+      });
+    });
+
+    // Prevent double submits
+    function lock(btn, isLocked){
+      btn.disabled = isLocked;
+      btn.textContent = isLocked ? "Please wait…" : btn.dataset.label || btn.textContent;
+    }
+    ["signinBtn","signupBtn"].forEach(id=>{
+      const b = document.getElementById(id);
+      if (b) b.dataset.label = b.textContent;
+    });
 
     // ----- Sign Up -----
     document.getElementById("signupBtn").onclick = async () => {
       sm("signupMsg", "");
+      const btn = document.getElementById("signupBtn");
       const first = document.getElementById("su_first").value.trim();
-      const last = document.getElementById("su_last").value.trim();
+      const last  = document.getElementById("su_last").value.trim();
       const email = document.getElementById("su_email").value.trim();
-      const pass = document.getElementById("su_pass").value.trim();
+      const pass  = document.getElementById("su_pass").value.trim();
 
-      if (!first || !last || !email || !pass)
-        return sm("signupMsg", "All fields are required.");
-
-      const { error } = await supabase.auth.signUp({
-        email,
-        password: pass,
-        options: {
-          data: { first_name: first, last_name: last },
-          emailRedirectTo: APP_URL,
-        },
-      });
-
-      if (error) sm("signupMsg", "❌ " + error.message);
-      else {
-        sm("signupMsg", "✅ Account created! Check your email to confirm before signing in.");
-        document.getElementById("su_first").value =
-          document.getElementById("su_last").value =
-          document.getElementById("su_email").value =
-          document.getElementById("su_pass").value = "";
+      if (!first || !last || !email || !pass){
+        sm("signupMsg", "All fields are required.");
+        return;
       }
+
+      try{
+        lock(btn, true);
+        const { error } = await supabase.auth.signUp({
+          email,
+          password: pass,
+          options: {
+            data: { first_name: first, last_name: last },
+            emailRedirectTo: APP_URL,
+          },
+        });
+        if (error) sm("signupMsg", "❌ " + error.message);
+        else{
+          sm("signupMsg", "✅ Account created! Check your email to confirm before signing in.");
+          ["su_first","su_last","su_email","su_pass"].forEach(id => (document.getElementById(id).value = ""));
+          activate("in");
+        }
+      } finally { lock(btn, false); }
     };
 
     // ----- Sign In -----
     document.getElementById("signinBtn").onclick = async () => {
       sm("signinMsg", "");
+      const btn = document.getElementById("signinBtn");
       const email = document.getElementById("si_email").value.trim();
-      const pass = document.getElementById("si_pass").value.trim();
-      if (!email || !pass)
-        return sm("signinMsg", "Email and password are required.");
-
-      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) sm("signinMsg", "❌ " + error.message);
-      else {
-        sm("signinMsg", "✅ Login successful. Redirecting…");
-        setTimeout(() => (location.href = APP_URL), 500);
+      const pass  = document.getElementById("si_pass").value.trim();
+      if (!email || !pass){
+        sm("signinMsg", "Email and password are required.");
+        return;
       }
+
+      try{
+        lock(btn, true);
+        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if (error) sm("signinMsg", "❌ " + error.message);
+        else{
+          sm("signinMsg", "✅ Login successful. Redirecting…");
+          setTimeout(() => (location.href = APP_URL), 400);
+        }
+      } finally { lock(btn, false); }
     };
 
     // ----- Forgot Password -----
     document.getElementById("forgotBtn").onclick = async (e) => {
       e.preventDefault();
-      const email = prompt("Enter your account email:");
+      const prefill = document.getElementById("si_email").value.trim();
+      const email = prompt("Enter your account email:", prefill || "");
       if (!email) return;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: RESET_URL,
