@@ -5,7 +5,8 @@
     <title>Study Advisor — Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body { font-family: system-ui, Arial, sans-serif; max-width: 1000px; margin: 24px auto; padding: 0 16px; }      
+      /* ===== Base layout ===== */
+      body { font-family: system-ui, Arial, sans-serif; max-width: 1100px; margin: 24px auto; padding: 0 16px; }
       header { display:flex; justify-content:space-between; align-items:center; margin:12px 0; padding:8px 0; border-bottom:1px solid #eee; }
       .muted { color:#666; font-size: 13px; }
       .row { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin: 12px 0; }
@@ -23,13 +24,73 @@
         #sidebar { width: 100% !important; border-right: none; border-bottom: 1px solid #ddd; }
       }
 
-      .actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
-      .btn { padding:8px 10px; border:1px solid #ccc; background:#f8f8f8; border-radius:6px; }
+      /* ===== Buttons ===== */
+      .btn { padding:8px 10px; border:1px solid #ccc; background:#f8f8f8; border-radius:6px; transition: background .15s, border-color .15s, color .15s; }
+      .btn:hover { background:#f0f0f0; }
+      .btn-primary { background:#0a58ca; color:#fff; border-color:#0a58ca; }
+      .btn-primary:hover { background:#094daa; border-color:#094daa; }
+      .btn-success { background:#198754; color:#fff; border-color:#198754; }
+      .btn-success:hover { background:#166c45; border-color:#166c45; }
+      .btn-danger { background:#f8d7da; color:#842029; border-color:#f5c2c7; }
+      .btn-danger:hover { background:#f1bfc4; border-color:#e9a7ae; }
+      .btn-outline { background:#fff; border-color:#ccc; color:#333; }
+      .btn-outline:hover { background:#f8f8f8; }
       .btn.linklike { border:none; background:transparent; color:#0a58ca; padding:0; }
       .btn.linklike:hover { text-decoration: underline; }
+
+      .actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
       .saved-list { display:grid; gap:8px; }
       .saved-item { display:flex; justify-content:space-between; align-items:center; border:1px solid #eee; border-radius:8px; padding:8px 10px; background:#fafafa; }
       .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+
+      /* ===== How to Use ===== */
+      #howToPanel ol { margin: 8px 0 12px 22px; }
+      #howToPanel ol li { margin: 10px 0; line-height: 1.4; }
+      .note-box { background:#fff8e6; border:1px solid #ffe0a3; border-radius:8px; padding:10px 12px; color:#664d03; }
+
+      /* ===== Universities filters: 3x2 grid + stacked toggles ===== */
+      #universitiesPanel .grid-3x2 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 16px;
+        align-items: end;
+        margin-top: 8px;
+      }
+      #universitiesPanel .span-2 { grid-column: span 2; }
+
+      #universitiesPanel .toggles { margin-top: 14px; }
+      #universitiesPanel .toggles label { display: block; margin: 8px 0; }
+
+      #universitiesPanel .filters-gap { margin: 12px 0; }
+
+      #universitiesPanel #results { margin-top: 18px; }
+
+      /* Sort & pagination */
+      .meta-bar {
+        display:flex; align-items:center; justify-content:space-between;
+        margin:12px 0 8px 0;
+      }
+      .pager {
+        display:flex; align-items:center; gap:8px;
+      }
+      .pager button[disabled] { opacity:.5; cursor:not-allowed; }
+      .pager .info { font-size:12px; color:#666; }
+
+      @media (max-width: 680px) {
+        #universitiesPanel .grid-3x2 { grid-template-columns: 1fr; }
+        #universitiesPanel .span-2 { grid-column: auto; }
+        .meta-bar { flex-direction: column; align-items: flex-start; gap:8px; }
+      }
+
+      /* Credits banner */
+      .credits-pill {
+        display:inline-flex; align-items:center; gap:8px;
+        padding:6px 10px; border-radius:999px; background:#eef9f2; color:#0f5132; border:1px solid #cfe7da; font-size:13px;
+      }
+
+      /* Required/optional markers on SOP form */
+      .req::after { content:" *"; color:#d6336c; font-weight:600; }
+      .optional { color:#666; font-size:12px; margin-left:4px; }
     </style>
   </head>
   <body>
@@ -38,7 +99,7 @@
       <div><strong>Study Advisor</strong> — Dashboard</div>
       <div>
         <span id="whoami" class="muted" style="margin-right:12px;"></span>
-        <button id="logoutBtn">Log out</button>
+        <button id="logoutBtn" class="btn btn-outline">Log out</button>
       </div>
     </header>
 
@@ -67,24 +128,41 @@
               <li>Fill your details and click <strong>Continue</strong> to generate the SOP.</li>
               <li>All generated SOPs are listed in <strong>My SOPs</strong>.</li>
             </ol>
+            <div class="note-box">
+              💡 <strong>Tip:</strong> Don’t want to browse universities? You can <strong>generate an SOP directly</strong> in the <em>SOPs</em> tab — just type your University and Program and continue.
+            </div>
           </div>
         </section>
 
         <!-- Universities -->
         <section id="universitiesPanel" style="display:none;">
-          
-          <div class="row">
-            <div><label>GRE score (optional)</label><input id="gre" type="number" placeholder="e.g. 305" /></div>
-            <div><label>TOEFL score (optional)</label><input id="toefl" type="number" placeholder="e.g. 90" /></div>
-            <div><label>IELTS score (optional)</label><input id="ielts" type="number" step="0.5" placeholder="e.g. 7.0" /></div>
-            <div><label>Duolingo score (optional)</label><input id="duolingo" type="number" placeholder="e.g. 115" /></div>
+          <!-- Row 1: GRE / TOEFL / IELTS -->
+          <div class="grid-3x2">
+            <div>
+              <label>GRE score (optional)</label>
+              <input id="gre" type="number" placeholder="e.g. 305" />
+            </div>
+            <div>
+              <label>TOEFL score (optional)</label>
+              <input id="toefl" type="number" placeholder="e.g. 90" />
+            </div>
+            <div>
+              <label>IELTS score (optional)</label>
+              <input id="ielts" type="number" step="0.5" placeholder="e.g. 7.0" />
+            </div>
           </div>
 
-          <div class="row">
+          <!-- Row 2: Duolingo / Program (wider) -->
+          <div class="grid-3x2">
             <div>
+              <label>Duolingo score (optional)</label>
+              <input id="duolingo" type="number" placeholder="e.g. 115" />
+            </div>
+            <div class="span-2">
               <label>Program</label>
-              <select id="program">
+              <select id="program" style="width:100%;">
                 <option value="">Any</option>
+                <!-- Populated from DB on load (fallback list kept here) -->
                 <option>MS Computer Science</option>
                 <option>MS Data Science</option>
                 <option>MS Artificial Intelligence</option>
@@ -94,11 +172,40 @@
                 <option>MBA</option>
               </select>
             </div>
-            <div><label>&nbsp;</label><button id="searchBtn">Search</button></div>
-            <div><label>&nbsp;</label><label><input id="onlyGreOptional" type="checkbox" /> Show programs where GRE is optional/waived</label></div>
-            <div><label>&nbsp;</label><label><input id="onlyStem" type="checkbox" /> STEM only (OPT 36 months)</label></div>
           </div>
 
+          <!-- Row 3 & 4: each toggle on its own line -->
+          <div class="toggles">
+            <label><input id="onlyGreOptional" type="checkbox" /> Show programs where GRE is optional/waived</label>
+            <label><input id="onlyStem" type="checkbox" /> STEM only (OPT 36 months)</label>
+          </div>
+
+          <!-- Row 5: Search + Clear centered -->
+          <div class="filters-gap" style="display:flex; justify-content:center; gap:10px;">
+            <button id="searchBtn" class="btn btn-primary">Search</button>
+            <button id="clearBtn" class="btn btn-outline">Clear</button>
+          </div>
+
+          <!-- Sort bar + pagination -->
+          <div class="meta-bar">
+            <div>
+              <label style="font-size:12px; color:#444;">Sort by</label>
+              <select id="sortBy">
+                <option value="uni_asc">University (A–Z)</option>
+                <option value="name_asc">Program (A–Z)</option>
+                <option value="tuition_asc">Tuition (Low → High)</option>
+                <option value="tuition_desc">Tuition (High → Low)</option>
+                <option value="gre_req">GRE requirement (waived/optional first)</option>
+              </select>
+            </div>
+            <div class="pager">
+              <button id="prevPage" class="btn btn-outline">‹ Prev</button>
+              <span class="info" id="pageInfo">Page 1</span>
+              <button id="nextPage" class="btn btn-outline">Next ›</button>
+            </div>
+          </div>
+
+          <!-- Status + results -->
           <div id="status" class="muted">Ready.</div>
           <div id="results"></div>
         </section>
@@ -108,7 +215,7 @@
           <div class="card">
             <div class="toolbar">
               <strong id="savedTitle">Saved Universities</strong>
-              <div><button id="removeAllBtn" class="btn">Remove all</button></div>
+              <div><button id="removeAllBtn" class="btn btn-danger">Remove all</button></div>
             </div>
             <div id="savedList" class="saved-list"></div>
             <div id="savedEmpty" class="muted" style="display:none;">
@@ -121,30 +228,49 @@
         <section id="sopsPanel" style="display:none;">
           <div class="card">
             <h2 style="margin:0 0 8px;">Generate SOP</h2>
-            <div class="muted" style="margin-bottom:12px;">Pick a program from <em>Saved</em> or type university/program manually.</div>
-
-            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
-              <div><label>University</label><input id="sop_uni" type="text" placeholder="e.g. Northeastern University" /></div>
-              <div><label>Program</label><input id="sop_prog" type="text" placeholder="e.g. MS in Data Science" /></div>
+            <div class="muted" style="margin-bottom:12px;">
+              Fields marked with <span style="color:#d6336c;">*</span> are required.
             </div>
 
             <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
-              <div><label>Career goal (1–2 lines)</label><input id="sop_goal" type="text" placeholder="e.g. Data Scientist focusing on NLP" /></div>
-              <div><label>Academic background</label><input id="sop_background" type="text" placeholder="e.g. BTech CSE, 8.2 GPA; ML coursework" /></div>
+              <div>
+                <label class="req">University</label>
+                <input id="sop_uni" type="text" aria-required="true" placeholder="e.g. Northeastern University" />
+              </div>
+              <div>
+                <label class="req">Program</label>
+                <input id="sop_prog" type="text" aria-required="true" placeholder="e.g. MS in Data Science" />
+              </div>
             </div>
 
             <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
-              <div><label>Key projects / internships</label><input id="sop_projects" type="text" placeholder="e.g. CNN for X-ray, 6mo ML intern at Acme" /></div>
-              <div><label>Why this university/program?</label><input id="sop_reasons" type="text" placeholder="e.g. Faculty A’s lab, Co-op program, curriculum" /></div>
+              <div>
+                <label class="req">Career goal (1–2 lines)</label>
+                <input id="sop_goal" type="text" aria-required="true" placeholder="e.g. Data Scientist focusing on NLP" />
+              </div>
+              <div>
+                <label class="req">Academic background</label>
+                <input id="sop_background" type="text" aria-required="true" placeholder="e.g. BTech CSE, 8.2 GPA; ML coursework" />
+              </div>
             </div>
 
-            <!-- previous answers link -->
+            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+              <div>
+                <label>Key projects / internships <span class="optional">(optional)</span></label>
+                <input id="sop_projects" type="text" placeholder="e.g. CNN for X-ray, 6mo ML intern at Acme" />
+              </div>
+              <div>
+                <label>Why this university/program? <span class="optional">(optional)</span></label>
+                <input id="sop_reasons" type="text" placeholder="e.g. Faculty A’s lab, Co-op program, curriculum" />
+              </div>
+            </div>
+
             <div style="margin-top:4px;">
               <button id="usePrev" class="btn linklike" style="display:none;">Use previous answers for this program</button>
             </div>
 
             <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
-              <button id="sop_submit">Continue</button>
+              <button id="sop_submit" class="btn btn-primary">Continue</button>
               <div id="sop_msg" class="muted"></div>
             </div>
           </div>
@@ -164,17 +290,14 @@
     <script type="module">
       import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-      // ===== Config =====
       const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
       const LANDING_URL = `${location.origin}/docs/index.html`;
-      const CHECKOUT_URL = "https://your-checkout.example/"; // placeholder
+      const CHECKOUT_URL = "https://your-checkout.example/";
       const SOP_PRICE = 1;
 
-      // ===== Supabase =====
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      // Auth & Profile
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { location.href = LANDING_URL; throw new Error("Not signed in"); }
 
@@ -205,7 +328,6 @@
         location.href = LANDING_URL;
       });
 
-      // ===== Tabs =====
       function switchPanel(id) {
         const panels = ["howToPanel", "universitiesPanel", "savedPanel", "sopsPanel", "mySopsPanel"];
         panels.forEach(pid => {
@@ -215,14 +337,11 @@
         document.querySelectorAll('.nav-btn').forEach(btn => {
           btn.classList.toggle('active', btn.getAttribute('data-target') === id);
         });
-
-        // clear SOP inline message on panel switch
-        const sopMsgEl = document.getElementById('sop_msg');
-        if (sopMsgEl) sopMsgEl.textContent = "";
-
+        const sopMsgEl = document.getElementById('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = "";
         if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
         if (id === "mySopsPanel") listSops();
         if (id === "savedPanel") renderSavedPage();
+        if (id === "sopsPanel") refreshCreditsPill();
       }
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => switchPanel(btn.getAttribute('data-target')));
@@ -230,23 +349,19 @@
       const initial = (location.hash || "#howToPanel").replace("#", "");
       switchPanel(["howToPanel","universitiesPanel","savedPanel","sopsPanel","mySopsPanel"].includes(initial) ? initial : "howToPanel");
 
-      // ===== Helpers =====
       const el = (id) => document.getElementById(id);
 
-      // Track previous answers loaded for a specific (uni, prog)
-      let __prevAnswersLoadedFor = null; // string key "uni|||prog"
-
-      function clearSopAnswers() {
-        ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => { const i = el(id); if (i) i.value = ''; });
-        const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
-      }
-
+      /* ===== Credits (banner + helpers) ===== */
       async function getCredits() {
         const { data, error } = await supabase.from('credits').select('balance').eq('user_id', user.id).maybeSingle();
         if (error) { console.error(error); return 0; }
         return data?.balance ?? 0;
       }
-
+      async function refreshCreditsPill() {
+        const bal = await getCredits();
+        const span = el('creditsBalance');
+        if (span) span.textContent = String(bal);
+      }
       async function spendCredits(n = 1) {
         const current = await getCredits();
         if (current < n) return { ok:false, balance: current };
@@ -256,109 +371,11 @@
           .eq('user_id', user.id)
           .select('balance').single();
         if (error) return { ok:false, balance: current };
+        await refreshCreditsPill();
         return { ok:true, balance: data.balance };
       }
 
-      // Fetch latest answers (if any) for this user+program combo
-      async function fetchLatestAnswers(uni, prog) {
-        const { data, error } = await supabase
-          .from('sops')
-          .select('question_answers')
-          .eq('user_id', user.id)
-          .eq('university_name', uni)
-          .eq('program_name', prog)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        if (error) { console.error(error); return null; }
-        return (data && data[0] && data[0].question_answers) ? data[0].question_answers : null;
-      }
-
-      // Prefill uni+prog, clear answers, optionally show "Use previous answers"
-      async function prefillSopAndGo({ university_name, program_name }) {
-        el('sop_uni').value = university_name || '';
-        el('sop_prog').value = program_name || '';
-        clearSopAnswers();
-
-        const usePrevBtn = el('usePrev');
-        usePrevBtn.style.display = 'none';
-        usePrevBtn.dataset.answers = '';
-
-        const prev = await fetchLatestAnswers(university_name || '', program_name || '');
-        if (prev) {
-          usePrevBtn.dataset.answers = JSON.stringify(prev);
-          usePrevBtn.style.display = 'inline';
-          __prevAnswersLoadedFor = `${university_name}|||${program_name}`;
-        } else {
-          __prevAnswersLoadedFor = null;
-        }
-
-        switchPanel('sopsPanel');
-      }
-
-      // Hide "Use previous answers" if uni/prog changes manually
-      ['sop_uni','sop_prog'].forEach(id => {
-        const input = el(id);
-        if (input) {
-          input.addEventListener('input', () => {
-            const btn = el('usePrev');
-            if (btn) { btn.style.display = 'none'; btn.dataset.answers = ''; }
-            clearSopAnswers();
-            __prevAnswersLoadedFor = null;
-          });
-          input.addEventListener('focus', () => {
-            const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
-          });
-        }
-      });
-
-      // Clear inline message when editing any SOP field
-      ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => {
-        const input = el(id);
-        if (input) {
-          input.addEventListener('input', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
-          input.addEventListener('focus', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
-        }
-      });
-
-      // "Use previous answers" click handler
-      el('usePrev')?.addEventListener('click', () => {
-        const btn = el('usePrev');
-        try {
-          const prev = btn.dataset.answers ? JSON.parse(btn.dataset.answers) : null;
-          if (prev) {
-            el('sop_goal').value = prev.goal || '';
-            el('sop_background').value = prev.background || '';
-            el('sop_projects').value = prev.projects || '';
-            el('sop_reasons').value = prev.reasons || '';
-          }
-        } catch (_) {}
-        btn.style.display = 'none';
-      });
-
-      async function saveProgram({ program_id, program_name, university_name }) {
-        const { error } = await supabase.from('saved_programs').insert({
-          user_id: user.id, program_id, program_name, university_name
-        });
-        if (error && !/duplicate key/i.test(error.message)) alert('Save failed: ' + error.message);
-        await search();
-      }
-
-      async function removeSaved(program_id) {
-        const { error } = await supabase.from('saved_programs')
-          .delete().eq('user_id', user.id).eq('program_id', program_id);
-        if (error) alert('Remove failed: ' + error.message);
-        await renderSavedPage();
-        await search();
-      }
-
-      async function removeAllSaved() {
-        if (!confirm('Remove all saved programs?')) return;
-        const { error } = await supabase.from('saved_programs').delete().eq('user_id', user.id);
-        if (error) alert('Remove all failed: ' + error.message);
-        await renderSavedPage();
-        await search();
-      }
-
+      /* ===== Saved programs ===== */
       async function fetchSavedPrograms() {
         const { data, error } = await supabase
           .from('saved_programs')
@@ -367,8 +384,27 @@
         if (error) { console.error(error); return []; }
         return data || [];
       }
-
-      // Saved Page
+      async function saveProgram({ program_id, program_name, university_name }) {
+        const { error } = await supabase.from('saved_programs').insert({
+          user_id: user.id, program_id, program_name, university_name
+        });
+        if (error && !/duplicate key/i.test(error.message)) alert('Save failed: ' + error.message);
+        await search();
+      }
+      async function removeSaved(program_id) {
+        const { error } = await supabase.from('saved_programs')
+          .delete().eq('user_id', user.id).eq('program_id', program_id);
+        if (error) alert('Remove failed: ' + error.message);
+        await renderSavedPage();
+        await search();
+      }
+      async function removeAllSaved() {
+        if (!confirm('Remove all saved programs?')) return;
+        const { error } = await supabase.from('saved_programs').delete().eq('user_id', user.id);
+        if (error) alert('Remove all failed: ' + error.message);
+        await renderSavedPage();
+        await search();
+      }
       async function renderSavedPage() {
         const list = el('savedList');
         const empty = el('savedEmpty');
@@ -394,8 +430,8 @@
               <div class="muted">${new Date(r.saved_at).toLocaleString()}</div>
             </div>
             <div style="display:flex; gap:8px;">
-              <button class="btn genFromSaved" data-uni="${r.university_name}" data-name="${r.program_name}">Generate SOP</button>
-              <button class="btn" data-remove="${r.program_id}">Remove</button>
+              <button class="btn btn-primary genFromSaved" data-uni="${r.university_name}" data-name="${r.program_name}">Generate SOP</button>
+              <button class="btn btn-danger" data-remove="${r.program_id}">Remove</button>
             </div>
           </div>
         `).join('');
@@ -417,7 +453,109 @@
         el('removeAllBtn').onclick = removeAllSaved;
       }
 
-      // ===== Search / Results =====
+      /* ===== Programs dropdown (DB with fallback) ===== */
+      async function populateProgramsSelect() {
+        const select = el('program');
+        if (!select) return;
+
+        try {
+          const { data, error } = await supabase
+            .from('programs_view')
+            .select('name', { count: 'estimated', head: false })
+            .order('name', { ascending: true })
+            .limit(300); // safety cap
+
+          if (error || !data?.length) return; // keep fallback
+          const unique = Array.from(new Set(data.map(r => r.name).filter(Boolean)));
+          // Clear current options, re-add "Any"
+          select.innerHTML = '<option value="">Any</option>' + unique.map(n => `<option>${n}</option>`).join('');
+        } catch (e) {
+          console.warn('Program list fallback in use', e);
+        }
+      }
+
+      /* ===== SOP helpers ===== */
+      let __prevAnswersLoadedFor = null;
+      function clearSopAnswers() {
+        ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => { const i = el(id); if (i) i.value = ''; });
+        const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
+      }
+      async function fetchLatestAnswers(uni, prog) {
+        const { data, error } = await supabase
+          .from('sops')
+          .select('question_answers')
+          .eq('user_id', user.id)
+          .eq('university_name', uni)
+          .eq('program_name', prog)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (error) { console.error(error); return null; }
+        return (data && data[0] && data[0].question_answers) ? data[0].question_answers : null;
+      }
+      async function prefillSopAndGo({ university_name, program_name }) {
+        el('sop_uni').value = university_name || '';
+        el('sop_prog').value = program_name || '';
+        clearSopAnswers();
+
+        const usePrevBtn = el('usePrev');
+        usePrevBtn.style.display = 'none';
+        usePrevBtn.dataset.answers = '';
+
+        const prev = await fetchLatestAnswers(university_name || '', program_name || '');
+        if (prev) {
+          usePrevBtn.dataset.answers = JSON.stringify(prev);
+          usePrevBtn.style.display = 'inline';
+          __prevAnswersLoadedFor = `${university_name}|||${program_name}`;
+        } else {
+          __prevAnswersLoadedFor = null;
+        }
+
+        switchPanel('sopsPanel');
+      }
+      ['sop_uni','sop_prog'].forEach(id => {
+        const input = el(id);
+        if (input) {
+          input.addEventListener('input', () => {
+            const btn = el('usePrev');
+            if (btn) { btn.style.display = 'none'; btn.dataset.answers = ''; }
+            clearSopAnswers();
+            __prevAnswersLoadedFor = null;
+          });
+          input.addEventListener('focus', () => {
+            const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
+          });
+        }
+      });
+      ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => {
+        const input = el(id);
+        if (input) {
+          input.addEventListener('input', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
+          input.addEventListener('focus', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
+        }
+      });
+      el('usePrev')?.addEventListener('click', () => {
+        const btn = el('usePrev');
+        try {
+          const prev = btn.dataset.answers ? JSON.parse(btn.dataset.answers) : null;
+          if (prev) {
+            el('sop_goal').value = prev.goal || '';
+            el('sop_background').value = prev.background || '';
+            el('sop_projects').value = prev.projects || '';
+            el('sop_reasons').value = prev.reasons || '';
+          }
+        } catch (_) {}
+        btn.style.display = 'none';
+      });
+
+      /* ===== Search / Sort / Pagination ===== */
+      const STATE = {
+        page: 1,
+        pageSize: 15,
+        total: 0,
+        lastFilters: null,
+        lastSort: 'uni_asc',
+      };
+
       function buildFilters() {
         const gre = Number(el("gre").value || 0);
         const toefl = Number(el("toefl").value || 0);
@@ -429,22 +567,52 @@
         return { gre, toefl, ielts, duolingo, program, onlyGreOptional, onlyStem };
       }
 
+      function applySort(query, sortKey) {
+        switch (sortKey) {
+          case 'name_asc': return query.order('name', { ascending: true });
+          case 'tuition_asc': return query.order('tuition_usd_per_year', { ascending: true, nullsFirst: true });
+          case 'tuition_desc': return query.order('tuition_usd_per_year', { ascending: false, nullsLast: true });
+          case 'gre_req': 
+            // heuristic: optional/waived first -> order by gre_required text ascending (optional < required)
+            return query.order('gre_required', { ascending: true, nullsFirst: true });
+          case 'uni_asc':
+          default: return query.order('university_name', { ascending: true });
+        }
+      }
+
+      function updatePager() {
+        const totalPages = Math.max(1, Math.ceil(STATE.total / STATE.pageSize));
+        el('pageInfo').textContent = `Page ${STATE.page} of ${totalPages}`;
+        el('prevPage').disabled = (STATE.page <= 1);
+        el('nextPage').disabled = (STATE.page >= totalPages);
+      }
+
       async function search() {
         el("status").textContent = "Searching…";
         el("results").innerHTML = "";
 
         const f = buildFilters();
+        STATE.lastFilters = f;
+
+        const from = (STATE.page - 1) * STATE.pageSize;
+        const to = from + STATE.pageSize - 1;
 
         let query = supabase
           .from("programs_view")
-          .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months")
-          .order("university_name", { ascending: true });
+          .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months", { count: 'exact' });
 
         if (f.program) query = query.ilike("name", `%${f.program}%`);
         if (f.onlyStem) query = query.eq("stem", "Y");
 
-        const { data, error } = await query;
+        query = applySort(query, STATE.lastSort);
+        query = query.range(from, to);
+
+        const { data, error, count } = await query;
         if (error) { el("status").textContent = "Error: " + error.message; return; }
+
+        // Save total → update pager UI
+        STATE.total = count ?? 0;
+        updatePager();
 
         const filtered = (data || []).filter(row => {
           if (f.onlyGreOptional && !(row.gre_required === "optional" || row.gre_required === "waived")) return false;
@@ -460,12 +628,16 @@
         const saved = await fetchSavedPrograms();
         const savedSet = new Set(saved.map(s => s.program_id));
 
-        el("status").textContent = `Found ${filtered.length} program(s).`;
+        el("status").textContent = `Found ${STATE.total} program(s). Showing ${filtered.length} on this page.`;
         renderResults(filtered, savedSet);
       }
 
       function renderResults(rows, savedSet = new Set()) {
         const container = el("results");
+        if (!rows.length) {
+          container.innerHTML = '<div class="muted">No results.</div>';
+          return;
+        }
         for (const p of rows) {
           const div = document.createElement("div");
           div.className = "card";
@@ -484,8 +656,8 @@
           ].join(' ');
 
           const actions = isSaved
-            ? `<button class="btn undo" data-id="${p.program_id}">Undo</button>`
-            : `<button class="btn save" data-id="${p.program_id}" data-uni="${p.university_name}" data-name="${p.name}">Save</button>`;
+            ? `<button class="btn btn-outline undo" data-id="${p.program_id}">Undo</button>`
+            : `<button class="btn btn-outline save" data-id="${p.program_id}" data-uni="${p.university_name}" data-name="${p.name}">Save</button>`;
 
           div.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -524,45 +696,73 @@
         });
       }
 
-      document.getElementById("searchBtn").addEventListener("click", search);
+      // Search & controls
+      document.getElementById("searchBtn").addEventListener("click", () => { STATE.page = 1; search(); });
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        ["gre","toefl","ielts","duolingo"].forEach(id => { const i = el(id); if (i) i.value = ""; });
+        const programSel = el("program"); if (programSel) programSel.value = "";
+        el("onlyGreOptional").checked = false;
+        el("onlyStem").checked = false;
+        el("sortBy").value = "uni_asc";
+        STATE.page = 1;
+        STATE.lastSort = "uni_asc";
+        search();
+      });
+      document.getElementById("sortBy").addEventListener("change", (e) => {
+        STATE.lastSort = e.target.value || "uni_asc";
+        STATE.page = 1;
+        search();
+      });
+      document.getElementById("prevPage").addEventListener("click", () => {
+        if (STATE.page > 1) { STATE.page -= 1; search(); }
+      });
+      document.getElementById("nextPage").addEventListener("click", () => {
+        const totalPages = Math.max(1, Math.ceil(STATE.total / STATE.pageSize));
+        if (STATE.page < totalPages) { STATE.page += 1; search(); }
+      });
+
+      // Initial boot
+      await populateProgramsSelect();
+      await refreshCreditsPill();
       search();
 
-      // ===== .DOC generator (no CDN) =====
+      /* ===== .DOC generator (MS Word HTML) ===== */
+      function safeSlug(s) {
+        return (s || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+          .slice(0, 40);
+      }
       async function generateSopDocBlob({ uni, prog, goal, background, projects, reasons }) {
-        const safe = (s) => (s || "-")
-          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
+        const esc = (t) => (t || "-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
         const html = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office"
-      xmlns:w="urn:schemas-microsoft-com:office:word"
-      xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-  <meta charset="utf-8" />
-  <title>Statement of Purpose</title>
-  <style>
-    body { font-family: Calibri, Arial, sans-serif; line-height: 1.35; font-size: 12pt; }
-    h1 { font-size: 18pt; margin: 0 0 8pt; }
-    h2 { font-size: 14pt; margin: 14pt 0 6pt; }
-    p  { margin: 0 0 10pt; }
-  </style>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8" />
+<title>Statement of Purpose</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; line-height: 1.35; font-size: 12pt; }
+  h1 { font-size: 18pt; margin: 0 0 8pt; }
+  h2 { font-size: 14pt; margin: 14pt 0 6pt; }
+  p  { margin: 0 0 10pt; }
+</style>
 </head>
 <body>
   <h1>Statement of Purpose</h1>
-  <h2>${safe(prog)} — ${safe(uni)}</h2>
-  <h2>Career Goal</h2><p>${safe(goal)}</p>
-  <h2>Academic Background</h2><p>${safe(background)}</p>
-  <h2>Key Projects / Internships</h2><p>${safe(projects)}</p>
-  <h2>Why This University / Program</h2><p>${safe(reasons)}</p>
+  <h2>${esc(prog)} — ${esc(uni)}</h2>
+  <h2>Career Goal</h2><p>${esc(goal)}</p>
+  <h2>Academic Background</h2><p>${esc(background)}</p>
+  <h2>Key Projects / Internships</h2><p>${esc(projects)}</p>
+  <h2>Why This University / Program</h2><p>${esc(reasons)}</p>
   <h2>Submission Details</h2>
-  <p>User: ${safe(user.email)}</p>
+  <p>User: ${esc(user.email)}</p>
   <p>Generated: ${new Date().toLocaleString()}</p>
 </body>
 </html>`;
-
         return new Blob([html], { type: "application/msword" });
       }
 
-      // ===== SOP Submit =====
+      // SOP Submit
       const sopSubmitBtn = document.getElementById('sop_submit');
       const sopMsg = document.getElementById('sop_msg');
 
@@ -586,12 +786,12 @@
         try {
           sopMsg.textContent = 'Generating SOP…';
 
-          // Build .DOC (no external library)
           const blob = await generateSopDocBlob({ uni, prog, goal, background, projects, reasons });
-          const filename = `sop-${Date.now()}.doc`;
+
+          // Better file naming: sop-<uni>-<prog>-<timestamp>.doc
+          const filename = `sop-${safeSlug(uni)}-${safeSlug(prog)}-${Date.now()}.doc`;
           const storagePath = `${user.id}/${filename}`;
 
-          // Upload with correct MIME type
           const { error: upErr } = await supabase.storage.from('sop_pdfs').upload(
             storagePath, blob, { upsert: false, contentType: 'application/msword' }
           );
@@ -603,7 +803,6 @@
           const dec = await spendCredits(SOP_PRICE);
           if (!dec.ok) console.warn('Credit decrement failed; reconcile later');
 
-          // Success → go to My SOPs
           sopMsg.textContent = '';
           switchPanel('mySopsPanel');
           await listSops();
@@ -614,11 +813,10 @@
         }
       });
 
-      // ===== DB rows / My SOPs =====
       async function recordSopRow({ uni, prog, answers, storagePath }) {
         const { error } = await supabase.from('sops').insert({
           user_id: user.id,
-          program_id: prog, // storing name for now
+          program_id: prog,
           program_name: prog,
           university_name: uni,
           question_answers: answers,
@@ -642,7 +840,7 @@
               <strong>${r.program_name}</strong> — ${r.university_name}
               <div class="muted">${new Date(r.created_at).toLocaleString()}</div>
             </div>
-            <div><button class="btn dl" data-path="${r.storage_path}">Download</button></div>
+            <div><button class="btn btn-success dl" data-path="${r.storage_path}">Download</button></div>
           </div>
         `).join('');
         box.querySelectorAll('.dl').forEach(btn => {
