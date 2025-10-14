@@ -5,7 +5,7 @@
     <title>Study Advisor — Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body { font-family: system-ui, Arial, sans-serif; max-width: 1000px; margin: 24px auto; padding: 0 16px; }
+      body { font-family: system-ui, Arial, sans-serif; max-width: 1000px; margin: 24px auto; padding: 0 16px; }      
       header { display:flex; justify-content:space-between; align-items:center; margin:12px 0; padding:8px 0; border-bottom:1px solid #eee; }
       .muted { color:#666; font-size: 13px; }
       .row { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin: 12px 0; }
@@ -16,6 +16,20 @@
       .badge { display:inline-block; padding:2px 8px; border-radius: 999px; border:1px solid #ccc; font-size:12px; margin-right:6px; }
       a { color:#0a58ca; text-decoration:none; }
       a:hover { text-decoration: underline; }
+
+      .nav-btn.active { background:#e9ecef !important; }
+      @media (max-width: 800px) {
+        #dashboard-layout { flex-direction: column; }
+        #sidebar { width: 100% !important; border-right: none; border-bottom: 1px solid #ddd; }
+      }
+
+      .actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+      .btn { padding:8px 10px; border:1px solid #ccc; background:#f8f8f8; border-radius:6px; }
+      .btn.linklike { border:none; background:transparent; color:#0a58ca; padding:0; }
+      .btn.linklike:hover { text-decoration: underline; }
+      .saved-list { display:grid; gap:8px; }
+      .saved-item { display:flex; justify-content:space-between; align-items:center; border:1px solid #eee; border-radius:8px; padding:8px 10px; background:#fafafa; }
+      .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     </style>
   </head>
   <body>
@@ -28,126 +42,391 @@
       </div>
     </header>
 
-    <!-- Finder Controls -->
-    <section>
-      <div class="row">
-        <div>
-          <label>GRE score (optional)</label>
-          <input id="gre" type="number" placeholder="e.g. 305" />
-        </div>
-        <div>
-          <label>TOEFL score (optional)</label>
-          <input id="toefl" type="number" placeholder="e.g. 90" />
-        </div>
-        <div>
-          <label>Track</label>
-          <select id="track">
-            <option value="">Any</option>
-            <option>CS</option>
-            <option>Data</option>
-            <option>AI</option>
-            <option>Cyber</option>
-            <option>IT</option>
-            <option>IS</option>
-            <option>SE</option>
-            <option>Networks</option>
-          </select>
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button id="searchBtn">Search</button>
-        </div>
-      </div>
+    <!-- Layout -->
+    <div id="dashboard-layout" style="display:flex; min-height:calc(100vh - 80px);">
+      <aside id="sidebar" style="width:240px; background:#f7f7f7; border-right:1px solid #ddd; padding:16px; box-sizing:border-box;">
+        <h3 style="margin-top:0;">Study Advisor</h3>
+        <nav style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+          <button class="nav-btn active" data-target="howToPanel" style="text-align:left; padding:8px 10px; border:none; background:#e9ecef; cursor:pointer; border-radius:6px;">📘 How to Use</button>
+          <button class="nav-btn" data-target="universitiesPanel" style="text-align:left; padding:8px 10px; border:none; background:transparent; cursor:pointer; border-radius:6px;">🎓 Universities</button>
+          <button class="nav-btn" data-target="savedPanel" style="text-align:left; padding:8px 10px; border:none; background:transparent; cursor:pointer; border-radius:6px;">⭐ Saved</button>
+          <button class="nav-btn" data-target="sopsPanel" style="text-align:left; padding:8px 10px; border:none; background:transparent; cursor:pointer; border-radius:6px;">✍️ SOPs</button>
+          <button class="nav-btn" data-target="mySopsPanel" style="text-align:left; padding:8px 10px; border:none; background:transparent; cursor:pointer; border-radius:6px;">📁 My SOPs</button>
+        </nav>
+      </aside>
 
-      <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
-        <div>
-          <label>
-            <input id="onlyGreOptional" type="checkbox" />
-            Show programs where GRE is optional/waived
-          </label>
-        </div>
-        <div>
-          <label>
-            <input id="onlyStem" type="checkbox" />
-            STEM only (OPT 36 months)
-          </label>
-        </div>
-      </div>
+      <main id="main-content" style="flex:1; padding:20px;">
+        <!-- HOW TO USE -->
+        <section id="howToPanel" style="display:block;">
+          <div class="card">
+            <h2>How to Use</h2>
+            <ol>
+              <li>Go to <strong>Universities</strong> → enter your scores and choose a <em>Program</em>, then click <strong>Search</strong>.</li>
+              <li>Click <strong>Save</strong> on programs you like — they appear under <strong>Saved</strong>.</li>
+              <li>In <strong>Saved</strong>, click <strong>Generate SOP</strong> to open the form with University + Program prefilled.</li>
+              <li>Fill your details and click <strong>Continue</strong> to generate the SOP.</li>
+              <li>All generated SOPs are listed in <strong>My SOPs</strong>.</li>
+            </ol>
+          </div>
+        </section>
 
-      <div id="status" class="muted">Ready.</div>
-      <div id="results"></div>
-    </section>
+        <!-- Universities -->
+        <section id="universitiesPanel" style="display:none;">
+          
+          <div class="row">
+            <div><label>GRE score (optional)</label><input id="gre" type="number" placeholder="e.g. 305" /></div>
+            <div><label>TOEFL score (optional)</label><input id="toefl" type="number" placeholder="e.g. 90" /></div>
+            <div><label>IELTS score (optional)</label><input id="ielts" type="number" step="0.5" placeholder="e.g. 7.0" /></div>
+            <div><label>Duolingo score (optional)</label><input id="duolingo" type="number" placeholder="e.g. 115" /></div>
+          </div>
 
+          <div class="row">
+            <div>
+              <label>Program</label>
+              <select id="program">
+                <option value="">Any</option>
+                <option>MS Computer Science</option>
+                <option>MS Data Science</option>
+                <option>MS Artificial Intelligence</option>
+                <option>MS Cybersecurity</option>
+                <option>MS Information Systems</option>
+                <option>MS Software Engineering</option>
+                <option>MBA</option>
+              </select>
+            </div>
+            <div><label>&nbsp;</label><button id="searchBtn">Search</button></div>
+            <div><label>&nbsp;</label><label><input id="onlyGreOptional" type="checkbox" /> Show programs where GRE is optional/waived</label></div>
+            <div><label>&nbsp;</label><label><input id="onlyStem" type="checkbox" /> STEM only (OPT 36 months)</label></div>
+          </div>
+
+          <div id="status" class="muted">Ready.</div>
+          <div id="results"></div>
+        </section>
+
+        <!-- Saved -->
+        <section id="savedPanel" style="display:none;">
+          <div class="card">
+            <div class="toolbar">
+              <strong id="savedTitle">Saved Universities</strong>
+              <div><button id="removeAllBtn" class="btn">Remove all</button></div>
+            </div>
+            <div id="savedList" class="saved-list"></div>
+            <div id="savedEmpty" class="muted" style="display:none;">
+              No saved items yet. Go to <a href="#universitiesPanel" id="goToUnis">Universities</a> to add some.
+            </div>
+          </div>
+        </section>
+
+        <!-- SOPs -->
+        <section id="sopsPanel" style="display:none;">
+          <div class="card">
+            <h2 style="margin:0 0 8px;">Generate SOP</h2>
+            <div class="muted" style="margin-bottom:12px;">Pick a program from <em>Saved</em> or type university/program manually.</div>
+
+            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+              <div><label>University</label><input id="sop_uni" type="text" placeholder="e.g. Northeastern University" /></div>
+              <div><label>Program</label><input id="sop_prog" type="text" placeholder="e.g. MS in Data Science" /></div>
+            </div>
+
+            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+              <div><label>Career goal (1–2 lines)</label><input id="sop_goal" type="text" placeholder="e.g. Data Scientist focusing on NLP" /></div>
+              <div><label>Academic background</label><input id="sop_background" type="text" placeholder="e.g. BTech CSE, 8.2 GPA; ML coursework" /></div>
+            </div>
+
+            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+              <div><label>Key projects / internships</label><input id="sop_projects" type="text" placeholder="e.g. CNN for X-ray, 6mo ML intern at Acme" /></div>
+              <div><label>Why this university/program?</label><input id="sop_reasons" type="text" placeholder="e.g. Faculty A’s lab, Co-op program, curriculum" /></div>
+            </div>
+
+            <!-- previous answers link -->
+            <div style="margin-top:4px;">
+              <button id="usePrev" class="btn linklike" style="display:none;">Use previous answers for this program</button>
+            </div>
+
+            <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+              <button id="sop_submit">Continue</button>
+              <div id="sop_msg" class="muted"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- My SOPs -->
+        <section id="mySopsPanel" style="display:none;">
+          <div class="card">
+            <h2 style="margin:0 0 8px;">My SOPs</h2>
+            <div id="sopList" class="muted">No SOPs yet.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- App Script -->
     <script type="module">
       import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-      // ⬇️ Replace these with your real values
-      const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co"; 
+      // ===== Config =====
+      const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
-      const LANDING_URL = "https://study-advisor.vercel.app/docs/index.html";
+      const LANDING_URL = `${location.origin}/docs/index.html`;
+      const CHECKOUT_URL = "https://your-checkout.example/"; // placeholder
+      const SOP_PRICE = 1;
 
-      // Single Supabase client
+      // ===== Supabase =====
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      // ---------- Auth gate + profile bootstrap ----------
+      // Auth & Profile
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        location.href = LANDING_URL; // not signed in → go to landing
-        throw new Error("Not signed in");
-      }
+      if (!user) { location.href = LANDING_URL; throw new Error("Not signed in"); }
 
-      // 1) Ensure a profile row exists
-      await supabase
-        .from("profiles")
-        .upsert({ user_id: user.id, email: user.email }, { onConflict: "user_id" });
+      await supabase.from("profiles").upsert({ user_id: user.id, email: user.email }, { onConflict: "user_id" });
 
-      // 2) Load profile (names + admin only)
       let { data: profile } = await supabase
         .from("profiles")
         .select("is_admin, first_name, last_name")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // 3) Copy names from auth metadata once if missing
       const metaFirst = user.user_metadata?.first_name || null;
       const metaLast  = user.user_metadata?.last_name || null;
       if ((!profile?.first_name || !profile?.last_name) && (metaFirst || metaLast)) {
-        await supabase
-          .from("profiles")
-          .update({ first_name: metaFirst, last_name: metaLast })
-          .eq("user_id", user.id);
-        ({ data: profile } = await supabase
-          .from("profiles")
-          .select("is_admin, first_name, last_name")
-          .eq("user_id", user.id)
-          .maybeSingle());
+        await supabase.from("profiles").update({ first_name: metaFirst, last_name: metaLast }).eq("user_id", user.id);
+        ({ data: profile } = await supabase.from("profiles")
+          .select("is_admin, first_name, last_name").eq("user_id", user.id).maybeSingle());
       }
 
-      // 4) Show identity in header (Full Name preferred, else email)
-      const headerName =
-        (profile?.first_name || profile?.last_name)
-          ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
-          : (user.email || "Signed in");
-
+      const headerName = (profile?.first_name || profile?.last_name)
+        ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
+        : (user.email || "Signed in");
       document.getElementById("whoami").innerHTML = headerName +
         (profile?.is_admin ? ' · <span style="border:1px solid #bbb;border-radius:999px;padding:2px 8px;font-size:12px;">Admin</span>' : '');
 
-      // 5) Logout
       document.getElementById("logoutBtn").addEventListener("click", async () => {
         await supabase.auth.signOut();
         location.href = LANDING_URL;
       });
 
-      // ---------- Finder logic ----------
+      // ===== Tabs =====
+      function switchPanel(id) {
+        const panels = ["howToPanel", "universitiesPanel", "savedPanel", "sopsPanel", "mySopsPanel"];
+        panels.forEach(pid => {
+          const elx = document.getElementById(pid);
+          if (elx) elx.style.display = (pid === id) ? "block" : "none";
+        });
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-target') === id);
+        });
+
+        // clear SOP inline message on panel switch
+        const sopMsgEl = document.getElementById('sop_msg');
+        if (sopMsgEl) sopMsgEl.textContent = "";
+
+        if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+        if (id === "mySopsPanel") listSops();
+        if (id === "savedPanel") renderSavedPage();
+      }
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchPanel(btn.getAttribute('data-target')));
+      });
+      const initial = (location.hash || "#howToPanel").replace("#", "");
+      switchPanel(["howToPanel","universitiesPanel","savedPanel","sopsPanel","mySopsPanel"].includes(initial) ? initial : "howToPanel");
+
+      // ===== Helpers =====
       const el = (id) => document.getElementById(id);
 
+      // Track previous answers loaded for a specific (uni, prog)
+      let __prevAnswersLoadedFor = null; // string key "uni|||prog"
+
+      function clearSopAnswers() {
+        ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => { const i = el(id); if (i) i.value = ''; });
+        const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
+      }
+
+      async function getCredits() {
+        const { data, error } = await supabase.from('credits').select('balance').eq('user_id', user.id).maybeSingle();
+        if (error) { console.error(error); return 0; }
+        return data?.balance ?? 0;
+      }
+
+      async function spendCredits(n = 1) {
+        const current = await getCredits();
+        if (current < n) return { ok:false, balance: current };
+        const { data, error } = await supabase
+          .from('credits')
+          .update({ balance: current - n })
+          .eq('user_id', user.id)
+          .select('balance').single();
+        if (error) return { ok:false, balance: current };
+        return { ok:true, balance: data.balance };
+      }
+
+      // Fetch latest answers (if any) for this user+program combo
+      async function fetchLatestAnswers(uni, prog) {
+        const { data, error } = await supabase
+          .from('sops')
+          .select('question_answers')
+          .eq('user_id', user.id)
+          .eq('university_name', uni)
+          .eq('program_name', prog)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (error) { console.error(error); return null; }
+        return (data && data[0] && data[0].question_answers) ? data[0].question_answers : null;
+      }
+
+      // Prefill uni+prog, clear answers, optionally show "Use previous answers"
+      async function prefillSopAndGo({ university_name, program_name }) {
+        el('sop_uni').value = university_name || '';
+        el('sop_prog').value = program_name || '';
+        clearSopAnswers();
+
+        const usePrevBtn = el('usePrev');
+        usePrevBtn.style.display = 'none';
+        usePrevBtn.dataset.answers = '';
+
+        const prev = await fetchLatestAnswers(university_name || '', program_name || '');
+        if (prev) {
+          usePrevBtn.dataset.answers = JSON.stringify(prev);
+          usePrevBtn.style.display = 'inline';
+          __prevAnswersLoadedFor = `${university_name}|||${program_name}`;
+        } else {
+          __prevAnswersLoadedFor = null;
+        }
+
+        switchPanel('sopsPanel');
+      }
+
+      // Hide "Use previous answers" if uni/prog changes manually
+      ['sop_uni','sop_prog'].forEach(id => {
+        const input = el(id);
+        if (input) {
+          input.addEventListener('input', () => {
+            const btn = el('usePrev');
+            if (btn) { btn.style.display = 'none'; btn.dataset.answers = ''; }
+            clearSopAnswers();
+            __prevAnswersLoadedFor = null;
+          });
+          input.addEventListener('focus', () => {
+            const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
+          });
+        }
+      });
+
+      // Clear inline message when editing any SOP field
+      ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => {
+        const input = el(id);
+        if (input) {
+          input.addEventListener('input', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
+          input.addEventListener('focus', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
+        }
+      });
+
+      // "Use previous answers" click handler
+      el('usePrev')?.addEventListener('click', () => {
+        const btn = el('usePrev');
+        try {
+          const prev = btn.dataset.answers ? JSON.parse(btn.dataset.answers) : null;
+          if (prev) {
+            el('sop_goal').value = prev.goal || '';
+            el('sop_background').value = prev.background || '';
+            el('sop_projects').value = prev.projects || '';
+            el('sop_reasons').value = prev.reasons || '';
+          }
+        } catch (_) {}
+        btn.style.display = 'none';
+      });
+
+      async function saveProgram({ program_id, program_name, university_name }) {
+        const { error } = await supabase.from('saved_programs').insert({
+          user_id: user.id, program_id, program_name, university_name
+        });
+        if (error && !/duplicate key/i.test(error.message)) alert('Save failed: ' + error.message);
+        await search();
+      }
+
+      async function removeSaved(program_id) {
+        const { error } = await supabase.from('saved_programs')
+          .delete().eq('user_id', user.id).eq('program_id', program_id);
+        if (error) alert('Remove failed: ' + error.message);
+        await renderSavedPage();
+        await search();
+      }
+
+      async function removeAllSaved() {
+        if (!confirm('Remove all saved programs?')) return;
+        const { error } = await supabase.from('saved_programs').delete().eq('user_id', user.id);
+        if (error) alert('Remove all failed: ' + error.message);
+        await renderSavedPage();
+        await search();
+      }
+
+      async function fetchSavedPrograms() {
+        const { data, error } = await supabase
+          .from('saved_programs')
+          .select('program_id, program_name, university_name, saved_at')
+          .order('saved_at', { ascending: false });
+        if (error) { console.error(error); return []; }
+        return data || [];
+      }
+
+      // Saved Page
+      async function renderSavedPage() {
+        const list = el('savedList');
+        const empty = el('savedEmpty');
+        const title = el('savedTitle');
+
+        list.innerHTML = 'Loading…';
+        const rows = await fetchSavedPrograms();
+
+        title.textContent = `Saved Universities${rows.length ? ` (${rows.length})` : ''}`;
+
+        if (!rows.length) {
+          list.innerHTML = '';
+          empty.style.display = 'block';
+          el('goToUnis').onclick = () => switchPanel('universitiesPanel');
+          return;
+        }
+        empty.style.display = 'none';
+
+        list.innerHTML = rows.map(r => `
+          <div class="saved-item">
+            <div>
+              <strong>${r.program_name}</strong> — ${r.university_name}
+              <div class="muted">${new Date(r.saved_at).toLocaleString()}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn genFromSaved" data-uni="${r.university_name}" data-name="${r.program_name}">Generate SOP</button>
+              <button class="btn" data-remove="${r.program_id}">Remove</button>
+            </div>
+          </div>
+        `).join('');
+
+        list.querySelectorAll('.genFromSaved').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await prefillSopAndGo({
+              university_name: btn.getAttribute('data-uni'),
+              program_name: btn.getAttribute('data-name'),
+            });
+          });
+        });
+        list.querySelectorAll('button[data-remove]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await removeSaved(btn.getAttribute('data-remove'));
+          });
+        });
+
+        el('removeAllBtn').onclick = removeAllSaved;
+      }
+
+      // ===== Search / Results =====
       function buildFilters() {
         const gre = Number(el("gre").value || 0);
         const toefl = Number(el("toefl").value || 0);
-        const track = el("track").value;
+        const ielts = Number(el("ielts").value || 0);
+        const duolingo = Number(el("duolingo").value || 0);
+        const program = el("program").value;
         const onlyGreOptional = el("onlyGreOptional").checked;
         const onlyStem = el("onlyStem").checked;
-        return { gre, toefl, track, onlyGreOptional, onlyStem };
+        return { gre, toefl, ielts, duolingo, program, onlyGreOptional, onlyStem };
       }
 
       async function search() {
@@ -156,60 +435,69 @@
 
         const f = buildFilters();
 
-        // Base query from the joined view
         let query = supabase
           .from("programs_view")
-          .select("program_id, university_name, name, track, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, tuition_usd_per_year, program_url, website_url, stem, opt_months")
+          .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months")
           .order("university_name", { ascending: true });
 
-        // Server-side filters where possible
-        if (f.track) query = query.eq("track", f.track);
+        if (f.program) query = query.ilike("name", `%${f.program}%`);
         if (f.onlyStem) query = query.eq("stem", "Y");
 
         const { data, error } = await query;
+        if (error) { el("status").textContent = "Error: " + error.message; return; }
 
-        if (error) {
-          el("status").textContent = "Error: " + error.message;
-          return;
-        }
-
-        // Client-side filters (scores + GRE optional logic)
-        const filtered = data.filter(row => {
-          // GRE logic
+        const filtered = (data || []).filter(row => {
           if (f.onlyGreOptional && !(row.gre_required === "optional" || row.gre_required === "waived")) return false;
           if (f.gre && row.gre_required === "required") {
             if (row.gre_min_total && f.gre < row.gre_min_total) return false;
           }
-          // TOEFL logic
-          if (f.toefl) {
-            if (row.toefl_min_total && f.toefl < row.toefl_min_total) return false;
-          }
+          if (f.toefl && row.toefl_min_total && f.toefl < row.toefl_min_total) return false;
+          if (f.ielts && row.ielts_min_total && f.ielts < row.ielts_min_total) return false;
+          if (f.duolingo && row.duolingo_min_total && f.duolingo < row.duolingo_min_total) return false;
           return true;
         });
 
+        const saved = await fetchSavedPrograms();
+        const savedSet = new Set(saved.map(s => s.program_id));
+
         el("status").textContent = `Found ${filtered.length} program(s).`;
-        renderResults(filtered);
+        renderResults(filtered, savedSet);
       }
 
-      function renderResults(rows) {
+      function renderResults(rows, savedSet = new Set()) {
         const container = el("results");
         for (const p of rows) {
           const div = document.createElement("div");
           div.className = "card";
+
           const greInfo = `${p.gre_required || "n/a"}${p.gre_min_total ? ` (min ${p.gre_min_total})` : ""}`;
-          const engInfo = `${p.english_tests_accepted || "n/a"}${p.toefl_min_total ? ` (TOEFL ≥ ${p.toefl_min_total})` : ""}`;
+          const engInfo = [
+            p.toefl_min_total ? `TOEFL ≥ ${p.toefl_min_total}` : null,
+            p.ielts_min_total ? `IELTS ≥ ${p.ielts_min_total}` : null,
+            p.duolingo_min_total ? `Duolingo ≥ ${p.duolingo_min_total}` : null
+          ].filter(Boolean).join(" • ") || "n/a";
+
+          const isSaved = savedSet.has(p.program_id);
+          const badges = [
+            `<span class="badge">${p.stem === "Y" ? `STEM (OPT ${p.opt_months || 36}m)` : "Non-STEM"}</span>`,
+            isSaved ? `<span class="badge" title="Saved">💾 Saved</span>` : ``
+          ].join(' ');
+
+          const actions = isSaved
+            ? `<button class="btn undo" data-id="${p.program_id}">Undo</button>`
+            : `<button class="btn save" data-id="${p.program_id}" data-uni="${p.university_name}" data-name="${p.name}">Save</button>`;
+
           div.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div>
                 <strong>${p.name}</strong> — ${p.university_name}
                 <div class="muted" style="margin-top:2px;">
-                  ${p.program_url ? `<a href="${p.program_url}" target="_blank" rel="noopener">Program page</a>` : ""}
-                  ${p.website_url ? ` • <a href="${p.website_url}" target="_blank" rel="noopener">University</a>` : ""}
+                  ${p.website_url ? `<a href="${p.website_url}" target="_blank" rel="noopener">University site</a>` : ""}
                 </div>
               </div>
-              <div>
-                <span class="badge">${p.track}</span>
-                <span class="badge">${p.stem === "Y" ? `STEM (OPT ${p.opt_months || 36}m)` : "Non-STEM"}</span>
+              <div class="actions">
+                ${badges}
+                ${actions}
               </div>
             </div>
             <div class="muted" style="margin-top:6px;">
@@ -219,12 +507,155 @@
           `;
           container.appendChild(div);
         }
+
+        container.querySelectorAll('.save').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await saveProgram({
+              program_id: btn.getAttribute('data-id'),
+              program_name: btn.getAttribute('data-name'),
+              university_name: btn.getAttribute('data-uni'),
+            });
+          });
+        });
+        container.querySelectorAll('.undo').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await removeSaved(btn.getAttribute('data-id'));
+          });
+        });
       }
 
-      // Wire up search
       document.getElementById("searchBtn").addEventListener("click", search);
-      // Run once on load
       search();
+
+      // ===== .DOC generator (no CDN) =====
+      async function generateSopDocBlob({ uni, prog, goal, background, projects, reasons }) {
+        const safe = (s) => (s || "-")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="utf-8" />
+  <title>Statement of Purpose</title>
+  <style>
+    body { font-family: Calibri, Arial, sans-serif; line-height: 1.35; font-size: 12pt; }
+    h1 { font-size: 18pt; margin: 0 0 8pt; }
+    h2 { font-size: 14pt; margin: 14pt 0 6pt; }
+    p  { margin: 0 0 10pt; }
+  </style>
+</head>
+<body>
+  <h1>Statement of Purpose</h1>
+  <h2>${safe(prog)} — ${safe(uni)}</h2>
+  <h2>Career Goal</h2><p>${safe(goal)}</p>
+  <h2>Academic Background</h2><p>${safe(background)}</p>
+  <h2>Key Projects / Internships</h2><p>${safe(projects)}</p>
+  <h2>Why This University / Program</h2><p>${safe(reasons)}</p>
+  <h2>Submission Details</h2>
+  <p>User: ${safe(user.email)}</p>
+  <p>Generated: ${new Date().toLocaleString()}</p>
+</body>
+</html>`;
+
+        return new Blob([html], { type: "application/msword" });
+      }
+
+      // ===== SOP Submit =====
+      const sopSubmitBtn = document.getElementById('sop_submit');
+      const sopMsg = document.getElementById('sop_msg');
+
+      sopSubmitBtn?.addEventListener('click', async () => {
+        const uni = (document.getElementById('sop_uni')?.value || '').trim();
+        const prog = (document.getElementById('sop_prog')?.value || '').trim();
+        const goal = (document.getElementById('sop_goal')?.value || '').trim();
+        const background = (document.getElementById('sop_background')?.value || '').trim();
+        const projects = (document.getElementById('sop_projects')?.value || '').trim();
+        const reasons = (document.getElementById('sop_reasons')?.value || '').trim();
+
+        if (!uni || !prog) { sopMsg.textContent = 'Please enter University and Program.'; return; }
+        if (!goal || !background) { sopMsg.textContent = 'Please add your Career goal and Academic background.'; return; }
+
+        const bal = await getCredits();
+        if (bal < SOP_PRICE) {
+          sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}. <a href="${CHECKOUT_URL}" target="_blank" rel="noopener">Buy credits</a> and try again.`;
+          return;
+        }
+
+        try {
+          sopMsg.textContent = 'Generating SOP…';
+
+          // Build .DOC (no external library)
+          const blob = await generateSopDocBlob({ uni, prog, goal, background, projects, reasons });
+          const filename = `sop-${Date.now()}.doc`;
+          const storagePath = `${user.id}/${filename}`;
+
+          // Upload with correct MIME type
+          const { error: upErr } = await supabase.storage.from('sop_pdfs').upload(
+            storagePath, blob, { upsert: false, contentType: 'application/msword' }
+          );
+          if (upErr) throw upErr;
+
+          const answers = { goal, background, projects, reasons };
+          await recordSopRow({ uni, prog, answers, storagePath });
+
+          const dec = await spendCredits(SOP_PRICE);
+          if (!dec.ok) console.warn('Credit decrement failed; reconcile later');
+
+          // Success → go to My SOPs
+          sopMsg.textContent = '';
+          switchPanel('mySopsPanel');
+          await listSops();
+
+        } catch (e) {
+          console.error(e);
+          sopMsg.textContent = 'Error: ' + (e?.message || e);
+        }
+      });
+
+      // ===== DB rows / My SOPs =====
+      async function recordSopRow({ uni, prog, answers, storagePath }) {
+        const { error } = await supabase.from('sops').insert({
+          user_id: user.id,
+          program_id: prog, // storing name for now
+          program_name: prog,
+          university_name: uni,
+          question_answers: answers,
+          storage_path: storagePath,
+        });
+        if (error) throw error;
+      }
+
+      async function listSops() {
+        const box = document.getElementById('sopList');
+        box.textContent = 'Loading…';
+        const { data, error } = await supabase
+          .from('sops')
+          .select('id, program_name, university_name, storage_path, created_at')
+          .order('created_at', { ascending: false });
+        if (error) { box.textContent = error.message; return; }
+        if (!data?.length) { box.innerHTML = 'No SOPs yet.'; return; }
+        box.innerHTML = data.map(r => `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;">
+            <div>
+              <strong>${r.program_name}</strong> — ${r.university_name}
+              <div class="muted">${new Date(r.created_at).toLocaleString()}</div>
+            </div>
+            <div><button class="btn dl" data-path="${r.storage_path}">Download</button></div>
+          </div>
+        `).join('');
+        box.querySelectorAll('.dl').forEach(btn => {
+          btn.onclick = async () => {
+            const path = btn.getAttribute('data-path');
+            const { data, error } = await supabase.storage.from('sop_pdfs').download(path);
+            if (error) return alert('Download error: ' + error.message);
+            const url = URL.createObjectURL(data);
+            const a = document.createElement('a'); a.href = url; a.download = path.split('/').pop(); a.click();
+            URL.revokeObjectURL(url);
+          };
+        });
+      }
     </script>
   </body>
 </html>
