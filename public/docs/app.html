@@ -726,40 +726,43 @@
       await refreshCreditsPill();
       search();
 
-      /* ===== .DOC generator (MS Word HTML) ===== */
+      /* ===== AI call helper — Final version for production ===== */
+      async function generateSopWithAI({ uni, prog, goal, background, projects, reasons }) {
+        const payload = {
+          university: uni,
+          program: prog,
+          careerGoal: goal,
+          academicBackground: background,
+          projects: projects || "",
+          reasons: reasons || "",
+          sampleKey: "ms-computer-science/sample-001.txt",
+          locale: "en"
+        };
+
+        const res = await fetch("/api/generate-sop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch { /* fallback if not JSON */ }
+
+        if (!res.ok || !data?.ok) {
+          throw new Error(data?.error || text || `HTTP ${res.status}`);
+        }
+
+        return data.sop; // the generated SOP text from API
+      }
+
+      /* ===== (Legacy) .DOC generator kept as reference/fallback ===== */
       function safeSlug(s) {
         return (s || "")
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)/g, "")
           .slice(0, 40);
-      }
-      async function generateSopDocBlob({ uni, prog, goal, background, projects, reasons }) {
-        const esc = (t) => (t || "-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-        const html = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="utf-8" />
-<title>Statement of Purpose</title>
-<style>
-  body { font-family: Calibri, Arial, sans-serif; line-height: 1.35; font-size: 12pt; }
-  h1 { font-size: 18pt; margin: 0 0 8pt; }
-  h2 { font-size: 14pt; margin: 14pt 0 6pt; }
-  p  { margin: 0 0 10pt; }
-</style>
-</head>
-<body>
-  <h1>Statement of Purpose</h1>
-  <h2>${esc(prog)} — ${esc(uni)}</h2>
-  <h2>Career Goal</h2><p>${esc(goal)}</p>
-  <h2>Academic Background</h2><p>${esc(background)}</p>
-  <h2>Key Projects / Internships</h2><p>${esc(projects)}</p>
-  <h2>Why This University / Program</h2><p>${esc(reasons)}</p>
-  <h2>Submission Details</h2>
-  <p>User: ${esc(user.email)}</p>
-  <p>Generated: ${new Date().toLocaleString()}</p>
-</body>
-</html>`;
-        return new Blob([html], { type: "application/msword" });
       }
 
       // SOP Submit
@@ -784,11 +787,35 @@
         }
 
         try {
-          sopMsg.textContent = 'Generating SOP…';
+          /* ===== Step B2/B3: use AI to generate SOP, then save as .doc ===== */
+          sopMsg.textContent = 'Generating SOP with AI…';
 
-          const blob = await generateSopDocBlob({ uni, prog, goal, background, projects, reasons });
+          // 1) Get AI text
+          const sopText = await generateSopWithAI({ uni, prog, goal, background, projects, reasons });
 
-          // Better file naming: sop-<uni>-<prog>-<timestamp>.doc
+          // 2) Wrap in Word-compatible HTML
+          const esc = (t) => (t || "-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+          const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8" />
+<title>Statement of Purpose</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; line-height: 1.35; font-size: 12pt; }
+  h1 { font-size: 18pt; margin: 0 0 8pt; }
+  p  { margin: 0 0 10pt; }
+</style>
+</head>
+<body>
+  <h1>Statement of Purpose</h1>
+  <p><strong>${esc(prog)}</strong> — ${esc(uni)}</p>
+  <div>${esc(sopText).replace(/\n/g,'<br/>')}</div>
+  <p style="margin-top:12pt;color:#555">Generated for ${esc(user.email)} · ${new Date().toLocaleString()}</p>
+</body>
+</html>`;
+
+          const blob = new Blob([html], { type: "application/msword" });
+
+          // 3) Upload to storage (nice filename)
           const filename = `sop-${safeSlug(uni)}-${safeSlug(prog)}-${Date.now()}.doc`;
           const storagePath = `${user.id}/${filename}`;
 
@@ -797,19 +824,22 @@
           );
           if (upErr) throw upErr;
 
+          // 4) Save row
           const answers = { goal, background, projects, reasons };
           await recordSopRow({ uni, prog, answers, storagePath });
 
+          // 5) Spend credit
           const dec = await spendCredits(SOP_PRICE);
           if (!dec.ok) console.warn('Credit decrement failed; reconcile later');
 
+          // 6) Done
           sopMsg.textContent = '';
           switchPanel('mySopsPanel');
           await listSops();
 
         } catch (e) {
           console.error(e);
-          sopMsg.textContent = 'Error: ' + (e?.message || e);
+          sopMsg.textContent = 'AI error: ' + (e?.message || e);
         }
       });
 
