@@ -11,7 +11,9 @@
       .muted { color:#666; font-size: 13px; }
       .row { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin: 12px 0; }
       .row label { font-size: 12px; color:#444; display:block; margin-bottom:4px; }
-      input, select, button { padding: 8px; font-size: 14px; }
+      input, select, button, textarea { padding: 8px; font-size: 14px; }
+      textarea { width:100%; min-height:92px; resize: vertical; }
+      input, select, textarea { width:100%; box-sizing:border-box; }
       button { cursor: pointer; }
       .card { border:1px solid #ddd; border-radius: 10px; padding: 12px; margin: 10px 0; }
       .badge { display:inline-block; padding:2px 8px; border-radius: 999px; border:1px solid #ccc; font-size:12px; margin-right:6px; }
@@ -91,6 +93,14 @@
       /* Required/optional markers on SOP form */
       .req::after { content:" *"; color:#d6336c; font-weight:600; }
       .optional { color:#666; font-size:12px; margin-left:4px; }
+
+      /* SOP section layout niceties */
+      .section-title { margin: 18px 0 8px; font-weight: 600; color:#333; }
+
+      /* AI status style */
+      .status-ai { color:#0f5132; background:#eef9f2; border:1px solid #cfe7da; padding:6px 10px; border-radius:8px; font-size:13px; display:inline-flex; gap:6px; align-items:center; }
+      .dots::after { content:"…"; animation: blink 1.2s steps(1) infinite; }
+      @keyframes blink { 50% { opacity: 0; } }
     </style>
   </head>
   <body>
@@ -232,6 +242,7 @@
               Fields marked with <span style="color:#d6336c;">*</span> are required.
             </div>
 
+            <!-- Required core -->
             <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
               <div>
                 <label class="req">University</label>
@@ -243,25 +254,47 @@
               </div>
             </div>
 
+            <!-- Required details -->
+            <div class="section-title">Your background</div>
             <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
               <div>
                 <label class="req">Career goal (1–2 lines)</label>
-                <input id="sop_goal" type="text" aria-required="true" placeholder="e.g. Data Scientist focusing on NLP" />
+                <textarea id="sop_goal" aria-required="true" rows="3" placeholder="e.g. Become a data scientist focusing on NLP to build human-centric language tools."></textarea>
               </div>
               <div>
-                <label class="req">Academic background</label>
-                <input id="sop_background" type="text" aria-required="true" placeholder="e.g. BTech CSE, 8.2 GPA; ML coursework" />
+                <label class="req">Undergrad University / College</label>
+                <input id="sop_ug_college" type="text" aria-required="true" placeholder="e.g. VNR VJIET" />
               </div>
             </div>
 
             <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
               <div>
-                <label>Key projects / internships <span class="optional">(optional)</span></label>
-                <input id="sop_projects" type="text" placeholder="e.g. CNN for X-ray, 6mo ML intern at Acme" />
+                <label class="req">Undergrad Major / Branch</label>
+                <input id="sop_ug_major" type="text" aria-required="true" placeholder="e.g. B.Tech — Computer Science" />
               </div>
               <div>
+                <label>Undergrad GPA / Score <span class="optional">(optional)</span></label>
+                <input id="sop_ug_gpa" type="text" placeholder="e.g. 8.2 / 10 or 3.6 / 4.0" />
+              </div>
+            </div>
+
+            <!-- Optional long answers -->
+            <div class="section-title">More details (optional)</div>
+            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+              <div>
+                <label>Academic background <span class="optional">(optional)</span></label>
+                <textarea id="sop_background" rows="5" placeholder="Key coursework, tools, certifications, clubs… (optional)"></textarea>
+              </div>
+              <div>
+                <label>Key projects / internships <span class="optional">(optional)</span></label>
+                <textarea id="sop_projects" rows="5" placeholder="E.g. CNN for X-ray, 6-month ML internship at Acme (optional)"></textarea>
+              </div>
+            </div>
+
+            <div class="row" style="grid-template-columns: 1fr;">
+              <div>
                 <label>Why this university/program? <span class="optional">(optional)</span></label>
-                <input id="sop_reasons" type="text" placeholder="e.g. Faculty A’s lab, Co-op program, curriculum" />
+                <textarea id="sop_reasons" rows="5" placeholder="Faculty, labs, co-op, curriculum, location, career outcomes… (optional)"></textarea>
               </div>
             </div>
 
@@ -273,6 +306,8 @@
               <button id="sop_submit" class="btn btn-primary">Continue</button>
               <div id="sop_msg" class="muted"></div>
             </div>
+
+            <div class="muted" style="margin-top:6px;">✨ Powered by AI — your SOP is uniquely generated.</div>
           </div>
         </section>
 
@@ -477,7 +512,10 @@
       /* ===== SOP helpers ===== */
       let __prevAnswersLoadedFor = null;
       function clearSopAnswers() {
-        ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => { const i = el(id); if (i) i.value = ''; });
+        [
+          'sop_goal','sop_ug_college','sop_ug_major','sop_ug_gpa',
+          'sop_background','sop_projects','sop_reasons'
+        ].forEach(id => { const i = el(id); if (i) i.value = ''; });
         const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
       }
       async function fetchLatestAnswers(uni, prog) {
@@ -526,7 +564,10 @@
           });
         }
       });
-      ['sop_goal','sop_background','sop_projects','sop_reasons'].forEach(id => {
+      [
+        'sop_goal','sop_ug_college','sop_ug_major','sop_ug_gpa',
+        'sop_background','sop_projects','sop_reasons'
+      ].forEach(id => {
         const input = el(id);
         if (input) {
           input.addEventListener('input', () => { const m = el('sop_msg'); if (m) m.textContent = ''; });
@@ -539,6 +580,9 @@
           const prev = btn.dataset.answers ? JSON.parse(btn.dataset.answers) : null;
           if (prev) {
             el('sop_goal').value = prev.goal || '';
+            el('sop_ug_college').value = prev.undergradCollege || '';
+            el('sop_ug_major').value = prev.undergradMajor || '';
+            el('sop_ug_gpa').value = prev.undergradGPA || '';
             el('sop_background').value = prev.background || '';
             el('sop_projects').value = prev.projects || '';
             el('sop_reasons').value = prev.reasons || '';
@@ -573,7 +617,6 @@
           case 'tuition_asc': return query.order('tuition_usd_per_year', { ascending: true, nullsFirst: true });
           case 'tuition_desc': return query.order('tuition_usd_per_year', { ascending: false, nullsLast: true });
           case 'gre_req': 
-            // heuristic: optional/waived first -> order by gre_required text ascending (optional < required)
             return query.order('gre_required', { ascending: true, nullsFirst: true });
           case 'uni_asc':
           default: return query.order('university_name', { ascending: true });
@@ -610,7 +653,6 @@
         const { data, error, count } = await query;
         if (error) { el("status").textContent = "Error: " + error.message; return; }
 
-        // Save total → update pager UI
         STATE.total = count ?? 0;
         updatePager();
 
@@ -726,14 +768,16 @@
       await refreshCreditsPill();
       search();
 
-      /* ===== AI call helper — Final version for production (fixed + complete) ===== */
-      async function generateSopWithAI({ uni, prog, goal, background, projects, reasons }) {
+      /* ===== AI call helper — Final version for production ===== */
+      async function generateSopWithAI({ uni, prog, goal, undergradCollege, undergradMajor, undergradGPA, background, projects, reasons }) {
         const payload = {
           university: uni,
           program: prog,
-          // IMPORTANT: these keys must match what the API expects
-          goal,                    // was careerGoal
-          background,              // was academicBackground
+          goal, // required
+          undergradCollege, // required
+          undergradMajor,   // required
+          undergradGPA: undergradGPA || "",
+          background: background || "",
           projects: projects || "",
           reasons: reasons || "",
           sampleKey: "ms-computer-science/sample-001.txt",
@@ -746,15 +790,12 @@
           body: JSON.stringify(payload)
         });
 
-        // Try JSON first; if it fails, show raw text for debugging
         let data = null;
         let raw = "";
         try {
           raw = await res.text();
           data = JSON.parse(raw);
-        } catch {
-          // ignore — raw text may still contain useful error
-        }
+        } catch {}
 
         if (!res.ok || !data?.ok) {
           const msg = (data?.error || raw || `HTTP ${res.status}`);
@@ -766,7 +807,7 @@
         return sopText;
       }
 
-      /* ===== (Legacy) .DOC generator kept as reference/fallback ===== */
+      /* ===== Utilities ===== */
       function safeSlug(s) {
         return (s || "")
           .toLowerCase()
@@ -783,12 +824,17 @@
         const uni = (document.getElementById('sop_uni')?.value || '').trim();
         const prog = (document.getElementById('sop_prog')?.value || '').trim();
         const goal = (document.getElementById('sop_goal')?.value || '').trim();
+        const undergradCollege = (document.getElementById('sop_ug_college')?.value || '').trim();
+        const undergradMajor = (document.getElementById('sop_ug_major')?.value || '').trim();
+        const undergradGPA = (document.getElementById('sop_ug_gpa')?.value || '').trim();
         const background = (document.getElementById('sop_background')?.value || '').trim();
         const projects = (document.getElementById('sop_projects')?.value || '').trim();
         const reasons = (document.getElementById('sop_reasons')?.value || '').trim();
 
+        // Validate required 5 fields
         if (!uni || !prog) { sopMsg.textContent = 'Please enter University and Program.'; return; }
-        if (!goal || !background) { sopMsg.textContent = 'Please add your Career goal and Academic background.'; return; }
+        if (!goal) { sopMsg.textContent = 'Please add your Career goal.'; return; }
+        if (!undergradCollege || !undergradMajor) { sopMsg.textContent = 'Please add your Undergrad college and major/branch.'; return; }
 
         const bal = await getCredits();
         if (bal < SOP_PRICE) {
@@ -797,11 +843,11 @@
         }
 
         try {
-          /* ===== Step B2/B3: use AI to generate SOP, then save as .doc ===== */
-          sopMsg.textContent = 'Generating SOP with AI…';
+          // Fancy green AI status line
+          sopMsg.innerHTML = '<span class="status-ai">✨ Generating SOP with AI<span class="dots"></span></span>';
 
           // 1) Get AI text
-          const sopText = await generateSopWithAI({ uni, prog, goal, background, projects, reasons });
+          const sopText = await generateSopWithAI({ uni, prog, goal, undergradCollege, undergradMajor, undergradGPA, background, projects, reasons });
 
           // 2) Wrap in Word-compatible HTML (preserve **bold** and line breaks)
           const esc = (t) => (t || "-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -840,8 +886,16 @@
           );
           if (upErr) throw upErr;
 
-          // 4) Save row
-          const answers = { goal, background, projects, reasons };
+          // 4) Save row with full answers (including new fields)
+          const answers = {
+            goal,
+            undergradCollege,
+            undergradMajor,
+            undergradGPA,
+            background,
+            projects,
+            reasons
+          };
           await recordSopRow({ uni, prog, answers, storagePath });
 
           // 5) Spend credit
@@ -849,7 +903,7 @@
           if (!dec.ok) console.warn('Credit decrement failed; reconcile later');
 
           // 6) Done
-          sopMsg.textContent = '';
+          sopMsg.innerHTML = '<span class="status-ai" style="background:#eaf7ef; border-color:#cfe7da;">✅ SOP generated successfully</span>';
           switchPanel('mySopsPanel');
           await listSops();
 

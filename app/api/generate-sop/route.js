@@ -3,10 +3,23 @@ import { NextResponse } from "next/server";
 
 /**
  * POST /api/generate-sop
- * Accepts either:
- *   { uni, prog, goal, background, projects?, reasons?, sampleKey?, locale? }
- *   { university, program, careerGoal, academicBackground, projects?, reasons?, sampleKey?, locale? }
- * Auto-selects a sample SOP file by program name if sampleKey not provided.
+ * Accepts either the old or new payload shapes.
+ *
+ * Required (new flow):
+ *   - uni/university
+ *   - prog/program
+ *   - goal/careerGoal
+ *   - undergradCollege (also accepts ugCollege / ug_college)
+ *   - undergradMajor   (also accepts ugMajor / ug_major)
+ *
+ * Optional:
+ *   - background/academicBackground
+ *   - undergradGPA (ugGPA / ug_gpa)
+ *   - testScore (test_score)
+ *   - projects, reasons
+ *   - firstName/lastName (first_name/last_name) — not inserted in text; client adds signature
+ *   - sampleKey (overrides auto selection)
+ *   - locale ("en" default)
  */
 export async function POST(req) {
   try {
@@ -37,47 +50,63 @@ export async function POST(req) {
       return NextResponse.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
     }
 
-    // Normalize field names from client
+    // ---- Normalize field names (backward-compatible) ----
     const uni        = body.uni ?? body.university ?? "";
     const prog       = body.prog ?? body.program ?? "";
     const goal       = body.goal ?? body.careerGoal ?? "";
-    const background = body.background ?? body.academicBackground ?? "";
-    const projects   = body.projects ?? "";
-    const reasons    = body.reasons ?? "";
-    const locale     = body.locale ?? "en";
 
-    if (!uni || !prog || !goal || !background) {
+    // New required undergrad fields (accept several aliases)
+    const undergradCollege =
+      body.undergradCollege ?? body.ugCollege ?? body.ug_college ?? "";
+    const undergradMajor =
+      body.undergradMajor ?? body.ugMajor ?? body.ug_major ?? "";
+
+    // Optional fields (accept several aliases)
+    const background = body.background ?? body.academicBackground ?? "";
+    const undergradGPA = body.undergradGPA ?? body.ugGPA ?? body.ug_gpa ?? "";
+    const testScore = body.testScore ?? body.test_score ?? "";
+    const projects  = body.projects ?? "";
+    const reasons   = body.reasons ?? "";
+    const locale    = body.locale ?? "en";
+
+    // Optional identity (not inserted in prompt; client adds footer)
+    const firstName = body.firstName ?? body.first_name ?? "";
+    const lastName  = body.lastName ?? body.last_name ?? "";
+
+    // ---- Required checks (new flow) ----
+    if (!uni || !prog || !goal || !undergradCollege || !undergradMajor) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Missing required fields: university, program, career goal, or background.",
-          received: { uni, prog, goal, background },
+          error:
+            "Missing required fields: university, program, career goal, undergrad college, or undergrad major.",
+          received: { uni, prog, goal, undergradCollege, undergradMajor },
         },
         { status: 400 }
       );
     }
 
-    // --- Program → sample file mapping (auto-pick if sampleKey not provided)
+    // ---- Program → sample file mapping (auto-pick if sampleKey not provided) ----
     const pickSampleKey = (programName = "") => {
       const p = programName.toLowerCase();
 
-      if (p.includes("artificial intelligence"))      return "ms-artificial-intelligence/sample-001.txt";
+      if (p.includes("artificial intelligence")) return "ms-artificial-intelligence/sample-001.txt";
       if (p.includes("computer networks") || p.includes("networks"))
-                                                     return "ms-computer-networks/sample-001.txt";
+        return "ms-computer-networks/sample-001.txt";
       if (p.includes("cybersecurity") || p.includes("cyber security"))
-                                                     return "ms-cybersecurity/sample-001.txt";
-      if (p.includes("data science"))                 return "ms-data-science/sample-001.txt";
-      if (p.includes("information systems"))          return "ms-information-systems/sample-001.txt";
-      if (p.includes("information technology"))       return "ms-information-technology/sample-001.txt";
-      if (p.includes("software engineering"))         return "ms-software-engineering/sample-001.txt";
+        return "ms-cybersecurity/sample-001.txt";
+      if (p.includes("data science")) return "ms-data-science/sample-001.txt";
+      if (p.includes("information systems")) return "ms-information-systems/sample-001.txt";
+      if (p.includes("information technology")) return "ms-information-technology/sample-001.txt";
+      if (p.includes("software engineering")) return "ms-software-engineering/sample-001.txt";
       // default catch-all
       return "ms-computer-science/sample-001.txt";
     };
 
     const sampleKey = body.sampleKey || pickSampleKey(prog);
 
-    // --- Fetch sample SOP text from PRIVATE Supabase bucket
-    // Use non-public endpoint + Service Role auth; encode each path segment safely.
+    // ---- Fetch sample SOP text from PRIVATE Supabase bucket ----
+    // Use non-public endpoint + Service Role auth; encode path segments safely.
     const safePath = sampleKey.split("/").map(encodeURIComponent).join("/");
     const sampleUrl = `${SUPABASE_URL}/storage/v1/object/${SAMPLE_SOPS_BUCKET}/${safePath}`;
 
@@ -93,29 +122,37 @@ export async function POST(req) {
       // network issue – continue without sample
     }
 
-    // --- Compose prompt for OpenAI
+    // ---- Compose a strict prompt for OpenAI ----
     const userPrompt = `
-Write a professional, authentic Statement of Purpose (500–700 words).
+Write a professional, authentic Statement of Purpose (~500–700 words).
 Locale: ${locale}
 
 University: ${uni}
 Program: ${prog}
 
 Career Goal: ${goal}
-Academic Background: ${background}
-Projects/Internships: ${projects || "N/A"}
-Why this university/program: ${reasons || "N/A"}
+Undergraduate College/University: ${undergradCollege}
+Undergraduate Major/Branch: ${undergradMajor}
+Undergraduate GPA (if provided): ${undergradGPA || "N/A"}
+Standardized Test (if provided): ${testScore || "N/A"}
 
-Use the following sample ONLY as style inspiration; do not copy content:
+Academic Background (optional notes): ${background || "N/A"}
+Key Projects / Internships (optional): ${projects || "N/A"}
+Why this university/program (optional): ${reasons || "N/A"}
+
+Style inspiration (do NOT copy content; only mirror tone/structure):
 ${sampleText || "(no sample available)"}
 
-Requirements:
-- Formal but natural tone
-- Clear paragraphing (no headings like "Introduction/Conclusion")
-- Avoid generic filler and repetition
+Writing constraints:
+- Do NOT invent details; only use the information above.
+- Do NOT include placeholders like "your undergrad university" or "[insert]".
+- Do NOT use section headings like "Introduction" or "Conclusion".
+- Use clear paragraphs (4–6), formal but human tone, specific and concise.
+- If an optional field is not provided, omit it gracefully.
+- Do NOT include salutations or a signature; the client will add it.
 `;
 
-    // --- Call OpenAI
+    // ---- Call OpenAI ----
     const aiResp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -135,17 +172,41 @@ Requirements:
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      return NextResponse.json({ ok: false, error: `OpenAI API error: ${errText}` }, { status: 502 });
+      return NextResponse.json(
+        { ok: false, error: `OpenAI API error: ${errText}` },
+        { status: 502 }
+      );
     }
 
     const aiData = await aiResp.json();
     const sop = aiData?.choices?.[0]?.message?.content?.trim();
     if (!sop) {
-      return NextResponse.json({ ok: false, error: "AI returned empty response." }, { status: 502 });
+      return NextResponse.json(
+        { ok: false, error: "AI returned empty response." },
+        { status: 502 }
+      );
     }
 
-    // Optionally return which sample was used (handy for debugging)
-    return NextResponse.json({ ok: true, sop, usedSampleKey: sampleKey }, { status: 200 });
+    // Helpful for debugging: echo which sample was used (safe)
+    return NextResponse.json(
+      {
+        ok: true,
+        sop,
+        usedSampleKey: sampleKey,
+        // returned but not used client-side:
+        accepted: {
+          uni,
+          prog,
+          goal,
+          undergradCollege,
+          undergradMajor,
+          undergradGPA,
+          testScore,
+          locale,
+        },
+      },
+      { status: 200 }
+    );
   } catch (e) {
     console.error("SOP generation error:", e);
     return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 500 });
