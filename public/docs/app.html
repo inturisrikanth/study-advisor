@@ -726,34 +726,45 @@
       await refreshCreditsPill();
       search();
 
-      /* ===== AI call helper — Final version for production ===== */
+      /* ===== AI call helper — Final version for production (fixed field names) ===== */
       async function generateSopWithAI({ uni, prog, goal, background, projects, reasons }) {
         const payload = {
           university: uni,
           program: prog,
-          careerGoal: goal,
-          academicBackground: background,
+          // IMPORTANT: use keys your API expects:
+          goal,                    // was careerGoal
+          background,              // was academicBackground
           projects: projects || "",
           reasons: reasons || "",
           sampleKey: "ms-computer-science/sample-001.txt",
           locale: "en"
         };
 
-        const res = await fetch("/api/generate-sop", {
+        const res = await fetch(`${location.origin}/api/generate-sop`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
-        const text = await res.text();
+        // Try json first; if it fails, fall back to raw text for error visibility
         let data = null;
-        try { data = JSON.parse(text); } catch { /* fallback if not JSON */ }
-
-        if (!res.ok || !data?.ok) {
-          throw new Error(data?.error || text || `HTTP ${res.status}`);
+        let raw = "";
+        try {
+          raw = await res.text();
+          data = JSON.parse(raw);
+        } catch {
+          // ignore, we'll handle below
         }
 
-        return data.sop; // the generated SOP text from API
+        if (!res.ok || !data?.ok) {
+          // If server returned structured error use it, else show HTTP status or raw body
+          const msg = (data?.error || raw || `HTTP ${res.status}`);
+          throw new Error(msg);
+        }
+
+        const sopText = (data.sop || "").trim();
+        if (!sopText) throw new Error("AI returned empty SOP.");
+        return sopText;
       }
 
       /* ===== (Legacy) .DOC generator kept as reference/fallback ===== */
@@ -793,8 +804,13 @@
           // 1) Get AI text
           const sopText = await generateSopWithAI({ uni, prog, goal, background, projects, reasons });
 
-          // 2) Wrap in Word-compatible HTML
+          // 2) Wrap in Word-compatible HTML (preserve **bold** and line breaks)
           const esc = (t) => (t || "-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+          const htmlBody = esc(sopText)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n{2,}/g, '</p><p>')
+            .replace(/\n/g, '<br/>');
+
           const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8" />
@@ -808,7 +824,7 @@
 <body>
   <h1>Statement of Purpose</h1>
   <p><strong>${esc(prog)}</strong> — ${esc(uni)}</p>
-  <div>${esc(sopText).replace(/\n/g,'<br/>')}</div>
+  <p>${htmlBody}</p>
   <p style="margin-top:12pt;color:#555">Generated for ${esc(user.email)} · ${new Date().toLocaleString()}</p>
 </body>
 </html>`;
