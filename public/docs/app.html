@@ -726,12 +726,12 @@
       await refreshCreditsPill();
       search();
 
-      /* ===== AI call helper — Final version for production (fixed field names) ===== */
+      /* ===== AI call helper — Final version for production (fixed + complete) ===== */
       async function generateSopWithAI({ uni, prog, goal, background, projects, reasons }) {
         const payload = {
           university: uni,
           program: prog,
-          // IMPORTANT: use keys your API expects:
+          // IMPORTANT: these keys must match what the API expects
           goal,                    // was careerGoal
           background,              // was academicBackground
           projects: projects || "",
@@ -746,18 +746,17 @@
           body: JSON.stringify(payload)
         });
 
-        // Try json first; if it fails, fall back to raw text for error visibility
+        // Try JSON first; if it fails, show raw text for debugging
         let data = null;
         let raw = "";
         try {
           raw = await res.text();
           data = JSON.parse(raw);
         } catch {
-          // ignore, we'll handle below
+          // ignore — raw text may still contain useful error
         }
 
         if (!res.ok || !data?.ok) {
-          // If server returned structured error use it, else show HTTP status or raw body
           const msg = (data?.error || raw || `HTTP ${res.status}`);
           throw new Error(msg);
         }
