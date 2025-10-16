@@ -50,7 +50,7 @@
       #howToPanel ol li { margin: 10px 0; line-height: 1.4; }
       .note-box { background:#fff8e6; border:1px solid #ffe0a3; border-radius:8px; padding:10px 12px; color:#664d03; }
 
-      /* ===== Universities filters: 3x2 grid + stacked toggles ===== */
+      /* ===== Universities filters: grid + stacked toggles ===== */
       #universitiesPanel .grid-3x2 {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -59,12 +59,9 @@
         margin-top: 8px;
       }
       #universitiesPanel .span-2 { grid-column: span 2; }
-
       #universitiesPanel .toggles { margin-top: 14px; }
       #universitiesPanel .toggles label { display: block; margin: 8px 0; }
-
       #universitiesPanel .filters-gap { margin: 12px 0; }
-
       #universitiesPanel #results { margin-top: 18px; }
 
       /* Sort & pagination */
@@ -101,6 +98,14 @@
       .status-ai { color:#0f5132; background:#eef9f2; border:1px solid #cfe7da; padding:6px 10px; border-radius:8px; font-size:13px; display:inline-flex; gap:6px; align-items:center; }
       .dots::after { content:"…"; animation: blink 1.2s steps(1) infinite; }
       @keyframes blink { 50% { opacity: 0; } }
+
+      /* Purchase card */
+      .price-card { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+      .price-chip { border:1px solid #ddd; border-radius:10px; padding:8px 10px; background:#f9fafb; }
+      .tiny-note { font-size:12px; color:#666; }
+      details.config { margin-top:8px; }
+      details.config summary { cursor:pointer; color:#0a58ca; }
+      .cfg-input { width:280px; }
     </style>
   </head>
   <body>
@@ -184,7 +189,19 @@
             </div>
           </div>
 
-          <!-- Row 3 & 4: each toggle on its own line -->
+          <!-- Row 2.5: NEW — State & Country -->
+          <div class="grid-3x2">
+            <div>
+              <label>State (optional)</label>
+              <input id="state" type="text" placeholder="e.g. CA or California" />
+            </div>
+            <div>
+              <label>Country (optional)</label>
+              <input id="country" type="text" placeholder="e.g. United States" />
+            </div>
+          </div>
+
+          <!-- Row 3 & 4: toggles -->
           <div class="toggles">
             <label><input id="onlyGreOptional" type="checkbox" /> Show programs where GRE is optional/waived</label>
             <label><input id="onlyStem" type="checkbox" /> STEM only (OPT 36 months)</label>
@@ -242,8 +259,33 @@
               Fields marked with <span style="color:#d6336c;">*</span> are required.
             </div>
 
+            <!-- Purchase credits (NEW) -->
+            <div class="price-card" style="margin-bottom:12px;">
+              <span class="price-chip">1 SOP credit = $10</span>
+              <button id="buyOneBtn" class="btn btn-success">Buy 1 SOP</button>
+              <span class="price-chip">Bundle: 4 for $30</span>
+              <button id="buyPackBtn" class="btn btn-success">Buy 4 SOPs</button>
+              <span class="tiny-note">Need to set Stripe price IDs once (see below).</span>
+            </div>
+            <details class="config">
+              <summary>Configure Stripe Price IDs</summary>
+              <div style="margin-top:8px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+                <div>
+                  <label>Single (price ID)</label>
+                  <input id="cfg_price_single" class="cfg-input" type="text" placeholder="price_xxx for 1 SOP"/>
+                </div>
+                <div>
+                  <label>Bundle (price ID)</label>
+                  <input id="cfg_price_bundle" class="cfg-input" type="text" placeholder="price_xxx for 4 SOPs"/>
+                </div>
+                <button id="cfg_save" class="btn btn-primary">Save</button>
+                <button id="cfg_clear" class="btn btn-outline">Clear</button>
+              </div>
+              <div class="tiny-note" id="cfg_status" style="margin-top:6px;"></div>
+            </details>
+
             <!-- Required core -->
-            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+            <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr)); margin-top:14px;">
               <div>
                 <label class="req">University</label>
                 <input id="sop_uni" type="text" aria-required="true" placeholder="e.g. Northeastern University" />
@@ -328,7 +370,6 @@
       const SUPABASE_URL = "https://xxpwjsgwrdagcbbttukh.supabase.co";
       const SUPABASE_ANON_KEY = "sb_publishable_oGIsd2pVpYcdJXics1PltQ_nFlsks_c";
       const LANDING_URL = `${location.origin}/docs/index.html`;
-      const CHECKOUT_URL = "https://your-checkout.example/";
       const SOP_PRICE = 1;
 
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -606,9 +647,11 @@
         const ielts = Number(el("ielts").value || 0);
         const duolingo = Number(el("duolingo").value || 0);
         const program = el("program").value;
+        const state = (el("state").value || "").trim();
+        const country = (el("country").value || "").trim();
         const onlyGreOptional = el("onlyGreOptional").checked;
         const onlyStem = el("onlyStem").checked;
-        return { gre, toefl, ielts, duolingo, program, onlyGreOptional, onlyStem };
+        return { gre, toefl, ielts, duolingo, program, state, country, onlyGreOptional, onlyStem };
       }
 
       function applySort(query, sortKey) {
@@ -640,23 +683,54 @@
         const from = (STATE.page - 1) * STATE.pageSize;
         const to = from + STATE.pageSize - 1;
 
-        let query = supabase
+        // First attempt: apply state/country at DB level (if columns exist)
+        let base = supabase
           .from("programs_view")
-          .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months", { count: 'exact' });
+          .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months, state, country", { count: 'exact' });
 
-        if (f.program) query = query.ilike("name", `%${f.program}%`);
-        if (f.onlyStem) query = query.eq("stem", "Y");
+        if (f.program) base = base.ilike("name", `%${f.program}%`);
+        if (f.onlyStem) base = base.eq("stem", "Y");
+        if (f.state) base = base.ilike("state", `%${f.state}%`);
+        if (f.country) base = base.ilike("country", `%${f.country}%`);
 
-        query = applySort(query, STATE.lastSort);
-        query = query.range(from, to);
+        base = applySort(base, STATE.lastSort).range(from, to);
 
-        const { data, error, count } = await query;
+        let { data, error, count } = await base;
+
+        // Fallback: if the view doesn't have state/country columns, retry without those filters
+        let usedFallback = false;
+        if (error && /column.*(state|country)/i.test(error.message)) {
+          usedFallback = true;
+          let q2 = supabase
+            .from("programs_view")
+            .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months", { count: 'exact' });
+          if (f.program) q2 = q2.ilike("name", `%${f.program}%`);
+          if (f.onlyStem) q2 = q2.eq("stem", "Y");
+          q2 = applySort(q2, STATE.lastSort).range(from, to);
+          const res2 = await q2;
+          data = res2.data; error = res2.error; count = res2.count;
+        }
+
         if (error) { el("status").textContent = "Error: " + error.message; return; }
 
         STATE.total = count ?? 0;
         updatePager();
 
-        const filtered = (data || []).filter(row => {
+        // Client-side filter if we used fallback
+        let rows = data || [];
+        if (usedFallback && (f.state || f.country)) {
+          const s = (f.state || "").toLowerCase();
+          const c = (f.country || "").toLowerCase();
+          rows = rows.filter(row => {
+            const hay = `${row.university_name} ${row.name}`.toLowerCase();
+            const okS = s ? hay.includes(s) : true;
+            const okC = c ? hay.includes(c) : true;
+            return okS && okC;
+          });
+        }
+
+        // Score filters
+        const filtered = rows.filter(row => {
           if (f.onlyGreOptional && !(row.gre_required === "optional" || row.gre_required === "waived")) return false;
           if (f.gre && row.gre_required === "required") {
             if (row.gre_min_total && f.gre < row.gre_min_total) return false;
@@ -741,7 +815,7 @@
       // Search & controls
       document.getElementById("searchBtn").addEventListener("click", () => { STATE.page = 1; search(); });
       document.getElementById("clearBtn").addEventListener("click", () => {
-        ["gre","toefl","ielts","duolingo"].forEach(id => { const i = el(id); if (i) i.value = ""; });
+        ["gre","toefl","ielts","duolingo","state","country"].forEach(id => { const i = el(id); if (i) i.value = ""; });
         const programSel = el("program"); if (programSel) programSel.value = "";
         el("onlyGreOptional").checked = false;
         el("onlyStem").checked = false;
@@ -816,6 +890,83 @@
           .slice(0, 40);
       }
 
+      /* ===== Stripe Price ID config (localStorage) ===== */
+      const LS_SINGLE = "stripe_price_single";
+      const LS_BUNDLE = "stripe_price_bundle";
+
+      function loadPriceIds() {
+        return {
+          single: localStorage.getItem(LS_SINGLE) || "",
+          bundle: localStorage.getItem(LS_BUNDLE) || "",
+        };
+      }
+      function savePriceIds({ single, bundle }) {
+        if (single) localStorage.setItem(LS_SINGLE, single);
+        if (bundle) localStorage.setItem(LS_BUNDLE, bundle);
+      }
+      function clearPriceIds() {
+        localStorage.removeItem(LS_SINGLE);
+        localStorage.removeItem(LS_BUNDLE);
+      }
+      function hydrateConfigUI() {
+        const { single, bundle } = loadPriceIds();
+        const s = el("cfg_price_single"); if (s) s.value = single;
+        const b = el("cfg_price_bundle"); if (b) b.value = bundle;
+        const status = el("cfg_status");
+        if (status) {
+          status.textContent = (single && bundle) ? "Saved locally. You can close this." : "Not configured yet.";
+        }
+      }
+      hydrateConfigUI();
+
+      el("cfg_save")?.addEventListener("click", () => {
+        const single = (el("cfg_price_single")?.value || "").trim();
+        const bundle = (el("cfg_price_bundle")?.value || "").trim();
+        if (!single || !bundle) {
+          el("cfg_status").textContent = "Please fill both price IDs.";
+          return;
+        }
+        savePriceIds({ single, bundle });
+        hydrateConfigUI();
+      });
+      el("cfg_clear")?.addEventListener("click", () => {
+        clearPriceIds();
+        hydrateConfigUI();
+      });
+
+      async function startCheckout(which) {
+        const ids = loadPriceIds();
+        const priceId = which === "single" ? ids.single : ids.bundle;
+        if (!priceId) {
+          alert("Please open 'Configure Stripe Price IDs' and save your price IDs first.");
+          return;
+        }
+        // create checkout session
+        try {
+          const resp = await fetch("/api/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              priceId,
+              quantity: (which === "single" ? 1 : 4),
+              userId: user.id,
+              email: user.email
+            })
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data?.ok || !data?.url) {
+            throw new Error(data?.error || `HTTP ${resp.status}`);
+          }
+          // redirect
+          window.location.href = data.url;
+        } catch (e) {
+          alert("Checkout error: " + (e?.message || e));
+        }
+      }
+
+      el("buyOneBtn")?.addEventListener("click", () => startCheckout("single"));
+      el("buyPackBtn")?.addEventListener("click", () => startCheckout("bundle"));
+
       // SOP Submit
       const sopSubmitBtn = document.getElementById('sop_submit');
       const sopMsg = document.getElementById('sop_msg');
@@ -838,7 +989,7 @@
 
         const bal = await getCredits();
         if (bal < SOP_PRICE) {
-          sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}. <a href="${CHECKOUT_URL}" target="_blank" rel="noopener">Buy credits</a> and try again.`;
+          sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}. Use the buttons above to buy credits and try again.`;
           return;
         }
 
@@ -849,7 +1000,7 @@
           // 1) Get AI text
           const sopText = await generateSopWithAI({ uni, prog, goal, undergradCollege, undergradMajor, undergradGPA, background, projects, reasons });
 
-          // 2) Wrap in Word-compatible HTML (preserve **bold** and line breaks)
+          // 2) Wrap in Word-compatible HTML
           const esc = (t) => (t || "-").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
           const htmlBody = esc(sopText)
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -876,7 +1027,7 @@
 
           const blob = new Blob([html], { type: "application/msword" });
 
-          // 3) Upload to storage (nice filename)
+          // 3) Upload to storage
           const filename = `sop-${safeSlug(uni)}-${safeSlug(prog)}-${Date.now()}.doc`;
           const storagePath = `${user.id}/${filename}`;
 
@@ -885,7 +1036,7 @@
           );
           if (upErr) throw upErr;
 
-          // 4) Save row with full answers (including new fields)
+          // 4) Save row
           const answers = {
             goal,
             undergradCollege,
