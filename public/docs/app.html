@@ -370,14 +370,6 @@
               <div id="sop_msg" class="muted"></div>
             </div>
 
-            <!-- Purchase (moved here, NEW) -->
-            <div class="purchase-bar" id="purchaseBar">
-              <span class="price-chip">1 SOP credit = $10</span>
-              <button id="buyOneBtn" class="btn btn-success">Buy 1 SOP</button>
-              <span class="price-chip">Bundle: 4 for $30</span>
-              <button id="buyPackBtn" class="btn btn-success">Buy 4 SOPs</button>
-            </div>
-
             <div class="muted" style="margin-top:6px;">✨ Powered by AI — your SOP is uniquely generated.</div>
           </div>
         </section>
@@ -1103,14 +1095,21 @@
         const bal = await getCredits();
         if (bal < SOP_PRICE) {
           sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}.`;
-          // Inline CTA to buy (NEW)
+
+          // Inline CTA to buy (NEW + Pricing line)
           const inline = document.createElement('div');
           inline.className = 'purchase-bar';
           inline.innerHTML = `
-            <button class="btn btn-success" id="buyInlineOne">Buy 1 SOP</button>
-            <button class="btn btn-success" id="buyInlinePack">Buy 4 SOPs</button>
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-success" id="buyInlineOne">Buy 1 SOP</button>
+                <button class="btn btn-success" id="buyInlinePack">Buy 4 SOPs</button>
+              </div>
+              <div class="tiny-note">(1 SOP credit = $10 · Bundle: 4 for $30)</div>
+            </div>
           `;
           sopMsg.appendChild(inline);
+
           document.getElementById('buyInlineOne')?.addEventListener('click', () => startCheckout('single'));
           document.getElementById('buyInlinePack')?.addEventListener('click', () => startCheckout('bundle'));
           return;
@@ -1179,6 +1178,8 @@
           sopMsg.innerHTML = '<span class="status-ai" style="background:#eaf7ef; border-color:#cfe7da;">✅ SOP generated successfully</span>';
           // Clear saved form now that we succeeded
           localStorage.removeItem(FORM_KEY);
+          clearSopAnswers();       // 👈 Added this
+          saveFormState(); 
           switchPanel('mySopsPanel');
           await listSops();
 
