@@ -31,7 +31,7 @@ export async function POST(req) {
 
     const stripe = new Stripe(STRIPE_SECRET_KEY);
 
-    // Use raw body for signature verification
+    // Read raw body for Stripe signature verification
     const rawBody = await req.text();
     const sig = req.headers.get("stripe-signature");
 
@@ -45,29 +45,38 @@ export async function POST(req) {
       );
     }
 
+    // We only handle completed checkout sessions here
     if (event.type !== "checkout.session.completed") {
       return NextResponse.json({ ok: true, ignored: event.type });
     }
 
-    // Get full session + line items for robust credit inference
+    // Get the full session with line items
     const session = event.data.object;
+    // optional: ignore if not paid (belt & suspenders)
+    if (session?.payment_status && session.payment_status !== "paid") {
+      return NextResponse.json({ ok: true, ignored: "payment_status != paid" });
+    }
+
     const full = await stripe.checkout.sessions.retrieve(session.id, {
       expand: ["line_items"],
     });
 
     // ---- Identify the user
-    // 1) Prefer explicit metadata.user_id (future-proof if you add it in /api/checkout)
-    let userId = full?.metadata?.user_id || null;
+    // Prefer explicit metadata user id from checkout
+    let userId =
+      full?.metadata?.user_id ||
+      full?.metadata?.userId ||
+      null;
 
-    // 2) Otherwise by email (current flow)
+    // Fallback by email
     const email =
       full?.customer_details?.email ||
       full?.customer_email ||
       full?.metadata?.email ||
       null;
 
-    // If we don’t have a user_id, try to map email → profiles.user_id
     if (!userId && email) {
+      // Map email -> profiles.user_id
       const resp1 = await fetch(
         `${SUPABASE_URL}/rest/v1/profiles?select=user_id&email=eq.${encodeURIComponent(email)}`,
         {
@@ -78,12 +87,12 @@ export async function POST(req) {
           cache: "no-store",
         }
       );
-      const prof = await resp1.json();
-      userId = prof?.[0]?.user_id || null;
+      const prof = await resp1.json().catch(() => null);
+      userId = Array.isArray(prof) && prof[0]?.user_id ? prof[0].user_id : null;
     }
 
     if (!userId) {
-      // We can’t credit anyone without a user
+      // No user — can’t credit
       return NextResponse.json(
         { ok: true, warn: "No user identified (missing metadata.user_id and no matching email)." },
         { status: 202 }
@@ -93,15 +102,29 @@ export async function POST(req) {
     // ---- Determine how many credits to add
     let addCredits = 0;
 
-    // A) If your checkout added metadata.priceKind, prefer it (explicit)
-    const kind = full?.metadata?.priceKind; // "single" | "bundle"
-    if (kind === "single") addCredits = 1;
-    if (kind === "bundle") addCredits = 4;
+    // (1) Most explicit: metadata.credits (set by /api/checkout we updated)
+    const metaCreditsRaw =
+      full?.metadata?.credits ??
+      session?.metadata?.credits ??
+      "";
+    const metaCredits = parseInt(String(metaCreditsRaw), 10);
+    if (Number.isFinite(metaCredits) && metaCredits > 0) {
+      addCredits = metaCredits;
+    }
 
-    // B) Else, inspect line items’ price IDs (requires STRIPE_PRICE_ONE/PACK)
+    // (2) If no explicit number, look at metadata.priceKind
+    if (!addCredits) {
+      const kind =
+        full?.metadata?.priceKind ||
+        session?.metadata?.priceKind ||
+        null; // "single" | "bundle"
+      if (kind === "single") addCredits = 1;
+      if (kind === "bundle") addCredits = 4;
+    }
+
+    // (3) If still unclear, infer via price IDs on line items
     if (!addCredits && Array.isArray(full?.line_items?.data)) {
-      const items = full.line_items.data;
-      for (const it of items) {
+      for (const it of full.line_items.data) {
         const priceId = it?.price?.id;
         const qty = it?.quantity || 1;
         if (priceId && STRIPE_PRICE_ONE && priceId === STRIPE_PRICE_ONE) addCredits += 1 * qty;
@@ -109,7 +132,7 @@ export async function POST(req) {
       }
     }
 
-    // C) Last fallback: infer from amount_total (works for $10 / $30 test setup)
+    // (4) Last fallback: infer via amount_total ($10 => 1, $30 => 4)
     if (!addCredits) {
       const cents = Number(full?.amount_total || 0);
       if (cents >= 3000) addCredits = 4;
@@ -130,7 +153,7 @@ export async function POST(req) {
       "Content-Type": "application/json",
     };
 
-    // Get current balance
+    // Fetch current balance (if any)
     const getRes = await fetch(
       `${SUPABASE_URL}/rest/v1/credits?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
       { headers, cache: "no-store" }
@@ -139,12 +162,16 @@ export async function POST(req) {
       const t = await getRes.text();
       return NextResponse.json({ ok: false, error: `Credits fetch failed: ${t}` }, { status: 500 });
     }
-    const rows = await getRes.json();
-    const current = Array.isArray(rows) && rows[0]?.balance ? Number(rows[0].balance) : 0;
+    const rows = await getRes.json().catch(() => []);
+    const current =
+      Array.isArray(rows) && rows.length > 0 && rows[0] && Number.isFinite(Number(rows[0].balance))
+        ? Number(rows[0].balance)
+        : 0;
+
     const newBal = current + addCredits;
 
-    if (rows.length === 0) {
-      // Insert
+    if (!Array.isArray(rows) || rows.length === 0) {
+      // Insert new row
       const ins = await fetch(`${SUPABASE_URL}/rest/v1/credits`, {
         method: "POST",
         headers: { ...headers, Prefer: "resolution=merge-duplicates,return=representation" },
@@ -155,7 +182,7 @@ export async function POST(req) {
         return NextResponse.json({ ok: false, error: `Credits insert failed: ${t}` }, { status: 500 });
       }
     } else {
-      // Update
+      // Update existing row
       const upd = await fetch(
         `${SUPABASE_URL}/rest/v1/credits?user_id=eq.${encodeURIComponent(userId)}`,
         {
@@ -170,7 +197,12 @@ export async function POST(req) {
       }
     }
 
-    return NextResponse.json({ ok: true, user_id: userId, added: addCredits, balance: newBal });
+    return NextResponse.json({
+      ok: true,
+      user_id: userId,
+      added: addCredits,
+      balance: newBal,
+    });
   } catch (e) {
     console.error("Webhook error:", e);
     return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status: 500 });

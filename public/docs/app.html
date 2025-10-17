@@ -99,13 +99,16 @@
       .dots::after { content:"…"; animation: blink 1.2s steps(1) infinite; }
       @keyframes blink { 50% { opacity: 0; } }
 
-      /* Purchase card */
-      .price-card { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+      /* Purchase card (relocated near Continue) */
+      .purchase-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
       .price-chip { border:1px solid #ddd; border-radius:10px; padding:8px 10px; background:#f9fafb; }
       .tiny-note { font-size:12px; color:#666; }
       details.config { margin-top:8px; }
       details.config summary { cursor:pointer; color:#0a58ca; }
       .cfg-input { width:280px; }
+
+      /* Mobile tweaks for SOP header row */
+      .sop-header-line { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
     </style>
   </head>
   <body>
@@ -254,35 +257,16 @@
         <!-- SOPs -->
         <section id="sopsPanel" style="display:none;">
           <div class="card">
-            <h2 style="margin:0 0 8px;">Generate SOP</h2>
+            <div class="sop-header-line">
+              <h2 style="margin:0 0 8px;">Generate SOP</h2>
+              <!-- Credits Left (NEW) -->
+              <span class="credits-pill" title="Credits you can spend on SOPs">
+                💳 Credits: <strong id="creditsBalance">0</strong>
+              </span>
+            </div>
             <div class="muted" style="margin-bottom:12px;">
               Fields marked with <span style="color:#d6336c;">*</span> are required.
             </div>
-
-            <!-- Purchase credits (NEW) -->
-            <div class="price-card" style="margin-bottom:12px;">
-              <span class="price-chip">1 SOP credit = $10</span>
-              <button id="buyOneBtn" class="btn btn-success">Buy 1 SOP</button>
-              <span class="price-chip">Bundle: 4 for $30</span>
-              <button id="buyPackBtn" class="btn btn-success">Buy 4 SOPs</button>
-              <span class="tiny-note">Need to set Stripe price IDs once (see below).</span>
-            </div>
-            <details class="config">
-              <summary>Configure Stripe Price IDs</summary>
-              <div style="margin-top:8px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-                <div>
-                  <label>Single (price ID)</label>
-                  <input id="cfg_price_single" class="cfg-input" type="text" placeholder="price_xxx for 1 SOP"/>
-                </div>
-                <div>
-                  <label>Bundle (price ID)</label>
-                  <input id="cfg_price_bundle" class="cfg-input" type="text" placeholder="price_xxx for 4 SOPs"/>
-                </div>
-                <button id="cfg_save" class="btn btn-primary">Save</button>
-                <button id="cfg_clear" class="btn btn-outline">Clear</button>
-              </div>
-              <div class="tiny-note" id="cfg_status" style="margin-top:6px;"></div>
-            </details>
 
             <!-- Required core -->
             <div class="row" style="grid-template-columns: repeat(2, minmax(0,1fr)); margin-top:14px;">
@@ -344,9 +328,18 @@
               <button id="usePrev" class="btn linklike" style="display:none;">Use previous answers for this program</button>
             </div>
 
-            <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+            <!-- Actions row -->
+            <div style="display:flex; gap:12px; align-items:center; margin-top:8px; flex-wrap:wrap;">
               <button id="sop_submit" class="btn btn-primary">Continue</button>
               <div id="sop_msg" class="muted"></div>
+            </div>
+
+            <!-- Purchase (moved here, NEW) -->
+            <div class="purchase-bar" id="purchaseBar">
+              <span class="price-chip">1 SOP credit = $10</span>
+              <button id="buyOneBtn" class="btn btn-success">Buy 1 SOP</button>
+              <span class="price-chip">Bundle: 4 for $30</span>
+              <button id="buyPackBtn" class="btn btn-success">Buy 4 SOPs</button>
             </div>
 
             <div class="muted" style="margin-top:6px;">✨ Powered by AI — your SOP is uniquely generated.</div>
@@ -372,11 +365,17 @@
       const LANDING_URL = `${location.origin}/docs/index.html`;
       const SOP_PRICE = 1;
 
+      // LocalStorage keys for form & checkout return
+      const FORM_KEY = "sop_form_state_v1";
+      const RETURN_KEY = "sop_return_to_panel";
+
       const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+      // ===== Auth guard
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { location.href = LANDING_URL; throw new Error("Not signed in"); }
 
+      // Ensure profile row exists & load it
       await supabase.from("profiles").upsert({ user_id: user.id, email: user.email }, { onConflict: "user_id" });
 
       let { data: profile } = await supabase
@@ -385,6 +384,7 @@
         .eq("user_id", user.id)
         .maybeSingle();
 
+      // Try to backfill first/last name from user metadata if empty
       const metaFirst = user.user_metadata?.first_name || null;
       const metaLast  = user.user_metadata?.last_name || null;
       if ((!profile?.first_name || !profile?.last_name) && (metaFirst || metaLast)) {
@@ -393,17 +393,20 @@
           .select("is_admin, first_name, last_name").eq("user_id", user.id).maybeSingle());
       }
 
+      // Header name
       const headerName = (profile?.first_name || profile?.last_name)
         ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
         : (user.email || "Signed in");
       document.getElementById("whoami").innerHTML = headerName +
         (profile?.is_admin ? ' · <span style="border:1px solid #bbb;border-radius:999px;padding:2px 8px;font-size:12px;">Admin</span>' : '');
 
+      // Logout
       document.getElementById("logoutBtn").addEventListener("click", async () => {
         await supabase.auth.signOut();
         location.href = LANDING_URL;
       });
 
+      // ===== Panel switching
       function switchPanel(id) {
         const panels = ["howToPanel", "universitiesPanel", "savedPanel", "sopsPanel", "mySopsPanel"];
         panels.forEach(pid => {
@@ -418,12 +421,16 @@
         if (id === "mySopsPanel") listSops();
         if (id === "savedPanel") renderSavedPage();
         if (id === "sopsPanel") refreshCreditsPill();
+        localStorage.setItem(RETURN_KEY, id);
       }
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => switchPanel(btn.getAttribute('data-target')));
       });
-      const initial = (location.hash || "#howToPanel").replace("#", "");
-      switchPanel(["howToPanel","universitiesPanel","savedPanel","sopsPanel","mySopsPanel"].includes(initial) ? initial : "howToPanel");
+      const initialHash = (location.hash || "#howToPanel").replace("#", "");
+      const initialPanel = ["howToPanel","universitiesPanel","savedPanel","sopsPanel","mySopsPanel"].includes(initialHash)
+        ? initialHash
+        : (localStorage.getItem(RETURN_KEY) || "howToPanel");
+      switchPanel(initialPanel);
 
       const el = (id) => document.getElementById(id);
 
@@ -543,7 +550,6 @@
 
           if (error || !data?.length) return; // keep fallback
           const unique = Array.from(new Set(data.map(r => r.name).filter(Boolean)));
-          // Clear current options, re-add "Any"
           select.innerHTML = '<option value="">Any</option>' + unique.map(n => `<option>${n}</option>`).join('');
         } catch (e) {
           console.warn('Program list fallback in use', e);
@@ -552,6 +558,7 @@
 
       /* ===== SOP helpers ===== */
       let __prevAnswersLoadedFor = null;
+
       function clearSopAnswers() {
         [
           'sop_goal','sop_ug_college','sop_ug_major','sop_ug_gpa',
@@ -559,6 +566,7 @@
         ].forEach(id => { const i = el(id); if (i) i.value = ''; });
         const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
       }
+
       async function fetchLatestAnswers(uni, prog) {
         const { data, error } = await supabase
           .from('sops')
@@ -571,6 +579,7 @@
         if (error) { console.error(error); return null; }
         return (data && data[0] && data[0].question_answers) ? data[0].question_answers : null;
       }
+
       async function prefillSopAndGo({ university_name, program_name }) {
         el('sop_uni').value = university_name || '';
         el('sop_prog').value = program_name || '';
@@ -591,13 +600,57 @@
 
         switchPanel('sopsPanel');
       }
+
+      // Preserve SOP form (NEW)
+      function loadFormState() {
+        try {
+          const raw = localStorage.getItem(FORM_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch { return null; }
+      }
+      function saveFormState() {
+        const state = {
+          uni: (el('sop_uni')?.value || '').trim(),
+          prog: (el('sop_prog')?.value || '').trim(),
+          goal: (el('sop_goal')?.value || '').trim(),
+          ugc:  (el('sop_ug_college')?.value || '').trim(),
+          ugm:  (el('sop_ug_major')?.value || '').trim(),
+          ugg:  (el('sop_ug_gpa')?.value || '').trim(),
+          bg:   (el('sop_background')?.value || '').trim(),
+          prj:  (el('sop_projects')?.value || '').trim(),
+          rsn:  (el('sop_reasons')?.value || '').trim(),
+        };
+        localStorage.setItem(FORM_KEY, JSON.stringify(state));
+      }
+      function hydrateFormFromState() {
+        const s = loadFormState();
+        if (!s) return;
+        el('sop_uni').value = s.uni || '';
+        el('sop_prog').value = s.prog || '';
+        el('sop_goal').value = s.goal || '';
+        el('sop_ug_college').value = s.ugc || '';
+        el('sop_ug_major').value = s.ugm || '';
+        el('sop_ug_gpa').value = s.ugg || '';
+        el('sop_background').value = s.bg || '';
+        el('sop_projects').value = s.prj || '';
+        el('sop_reasons').value = s.rsn || '';
+      }
+      ['sop_uni','sop_prog','sop_goal','sop_ug_college','sop_ug_major','sop_ug_gpa','sop_background','sop_projects','sop_reasons']
+        .forEach(id => el(id)?.addEventListener('input', saveFormState));
+
+      // On first load after Stripe, restore panel + form
+      hydrateFormFromState();
+      const lastPanel = localStorage.getItem(RETURN_KEY);
+      if (lastPanel) switchPanel(lastPanel);
+
+      // If user types in Uni/Prog, reset prev-answers & clear messages
       ['sop_uni','sop_prog'].forEach(id => {
         const input = el(id);
         if (input) {
           input.addEventListener('input', () => {
             const btn = el('usePrev');
             if (btn) { btn.style.display = 'none'; btn.dataset.answers = ''; }
-            clearSopAnswers();
+            const sopMsgEl = el('sop_msg'); if (sopMsgEl) sopMsgEl.textContent = '';
             __prevAnswersLoadedFor = null;
           });
           input.addEventListener('focus', () => {
@@ -627,6 +680,7 @@
             el('sop_background').value = prev.background || '';
             el('sop_projects').value = prev.projects || '';
             el('sop_reasons').value = prev.reasons || '';
+            saveFormState();
           }
         } catch (_) {}
         btn.style.display = 'none';
@@ -683,7 +737,6 @@
         const from = (STATE.page - 1) * STATE.pageSize;
         const to = from + STATE.pageSize - 1;
 
-        // First attempt: apply state/country at DB level (if columns exist)
         let base = supabase
           .from("programs_view")
           .select("program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months, state, country", { count: 'exact' });
@@ -697,7 +750,6 @@
 
         let { data, error, count } = await base;
 
-        // Fallback: if the view doesn't have state/country columns, retry without those filters
         let usedFallback = false;
         if (error && /column.*(state|country)/i.test(error.message)) {
           usedFallback = true;
@@ -716,7 +768,6 @@
         STATE.total = count ?? 0;
         updatePager();
 
-        // Client-side filter if we used fallback
         let rows = data || [];
         if (usedFallback && (f.state || f.country)) {
           const s = (f.state || "").toLowerCase();
@@ -729,7 +780,6 @@
           });
         }
 
-        // Score filters
         const filtered = rows.filter(row => {
           if (f.onlyGreOptional && !(row.gre_required === "optional" || row.gre_required === "waived")) return false;
           if (f.gre && row.gre_required === "required") {
@@ -890,74 +940,28 @@
           .slice(0, 40);
       }
 
-      /* ===== Stripe Price ID config (localStorage) ===== */
-      const LS_SINGLE = "stripe_price_single";
-      const LS_BUNDLE = "stripe_price_bundle";
-
-      function loadPriceIds() {
-        return {
-          single: localStorage.getItem(LS_SINGLE) || "",
-          bundle: localStorage.getItem(LS_BUNDLE) || "",
-        };
-      }
-      function savePriceIds({ single, bundle }) {
-        if (single) localStorage.setItem(LS_SINGLE, single);
-        if (bundle) localStorage.setItem(LS_BUNDLE, bundle);
-      }
-      function clearPriceIds() {
-        localStorage.removeItem(LS_SINGLE);
-        localStorage.removeItem(LS_BUNDLE);
-      }
-      function hydrateConfigUI() {
-        const { single, bundle } = loadPriceIds();
-        const s = el("cfg_price_single"); if (s) s.value = single;
-        const b = el("cfg_price_bundle"); if (b) b.value = bundle;
-        const status = el("cfg_status");
-        if (status) {
-          status.textContent = (single && bundle) ? "Saved locally. You can close this." : "Not configured yet.";
-        }
-      }
-      hydrateConfigUI();
-
-      el("cfg_save")?.addEventListener("click", () => {
-        const single = (el("cfg_price_single")?.value || "").trim();
-        const bundle = (el("cfg_price_bundle")?.value || "").trim();
-        if (!single || !bundle) {
-          el("cfg_status").textContent = "Please fill both price IDs.";
-          return;
-        }
-        savePriceIds({ single, bundle });
-        hydrateConfigUI();
-      });
-      el("cfg_clear")?.addEventListener("click", () => {
-        clearPriceIds();
-        hydrateConfigUI();
-      });
-
+      // Start checkout — keep form state + return location, then redirect
       async function startCheckout(which) {
-        const ids = loadPriceIds();
-        const priceId = which === "single" ? ids.single : ids.bundle;
-        if (!priceId) {
-          alert("Please open 'Configure Stripe Price IDs' and save your price IDs first.");
-          return;
-        }
-        // create checkout session
+        // Map the UI choice to a server-understood plan
+        const plan = which === "single" ? "one" : "pack";
+
         try {
           const resp = await fetch("/api/checkout", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              priceId,
-              quantity: (which === "single" ? 1 : 4),
+              which: which === "single" ? "single" : "bundle", // 👈 new key
               userId: user.id,
               email: user.email
             })
           });
+
           const data = await resp.json().catch(() => ({}));
           if (!resp.ok || !data?.ok || !data?.url) {
             throw new Error(data?.error || `HTTP ${resp.status}`);
           }
-          // redirect
+
+          // Go to Stripe Checkout
           window.location.href = data.url;
         } catch (e) {
           alert("Checkout error: " + (e?.message || e));
@@ -989,7 +993,17 @@
 
         const bal = await getCredits();
         if (bal < SOP_PRICE) {
-          sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}. Use the buttons above to buy credits and try again.`;
+          sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}.`;
+          // Inline CTA to buy (NEW)
+          const inline = document.createElement('div');
+          inline.className = 'purchase-bar';
+          inline.innerHTML = `
+            <button class="btn btn-success" id="buyInlineOne">Buy 1 SOP</button>
+            <button class="btn btn-success" id="buyInlinePack">Buy 4 SOPs</button>
+          `;
+          sopMsg.appendChild(inline);
+          document.getElementById('buyInlineOne')?.addEventListener('click', () => startCheckout('single'));
+          document.getElementById('buyInlinePack')?.addEventListener('click', () => startCheckout('bundle'));
           return;
         }
 
@@ -1054,6 +1068,8 @@
 
           // 6) Done
           sopMsg.innerHTML = '<span class="status-ai" style="background:#eaf7ef; border-color:#cfe7da;">✅ SOP generated successfully</span>';
+          // Clear saved form now that we succeeded
+          localStorage.removeItem(FORM_KEY);
           switchPanel('mySopsPanel');
           await listSops();
 

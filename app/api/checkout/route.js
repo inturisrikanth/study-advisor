@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 /**
  * POST /api/checkout
- * Body: { priceId: string, quantity?: number, userId?: string, email?: string }
+ * Body: { which?: "single" | "bundle", userId?: string, email?: string }
  * Returns: { ok: true, url } on success
  */
 export async function POST(req) {
@@ -16,7 +16,6 @@ export async function POST(req) {
       NEXT_PUBLIC_CHECKOUT_CANCEL_URL,
     } = process.env;
 
-    // --- Env sanity checks
     if (!STRIPE_SECRET_KEY) {
       return NextResponse.json({ ok: false, error: "Missing STRIPE_SECRET_KEY" }, { status: 500 });
     }
@@ -27,26 +26,24 @@ export async function POST(req) {
       return NextResponse.json({ ok: false, error: "Missing checkout return/cancel URLs" }, { status: 500 });
     }
 
-    // --- Parse/validate body
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
-    }
+    let body = {};
+    try { body = await req.json(); } catch { body = {}; }
 
-    const priceId  = String(body.priceId || "").trim();
-    const quantity = Math.max(1, Number(body.quantity || 1));
-    const userId   = typeof body.userId === "string" ? body.userId : "";
-    const email    = typeof body.email === "string" ? body.email : "";
+    // Accept either `which` ("single" | "bundle") or legacy `plan` ("one" | "pack")
+    const raw = (body.which || body.plan || "").toString().toLowerCase();
+    const which = raw === "bundle" || raw === "pack" ? "bundle" : "single";
 
-    // Only allow your two known prices for safety
-    const allowed = new Set([STRIPE_PRICE_ONE, STRIPE_PRICE_PACK]);
-    if (!allowed.has(priceId)) {
-      return NextResponse.json({ ok: false, error: "Unknown or disallowed priceId" }, { status: 400 });
-    }
+    const userId = typeof body.userId === "string" ? body.userId : "";
+    const email  = typeof body.email === "string" ? body.email : "";
 
-    // --- Create Stripe Checkout Session via REST
+    // Map to price, quantity, and explicit credits for the webhook
+    const isBundle = which === "bundle";
+    const priceId = isBundle ? STRIPE_PRICE_PACK : STRIPE_PRICE_ONE;
+    // IMPORTANT: if STRIPE_PRICE_PACK is a “4 credits” bundle price, quantity stays 1
+    const quantity = 1;
+    const credits = isBundle ? 4 : 1;
+    const priceKind = isBundle ? "bundle" : "single";
+
     const form = new URLSearchParams();
     form.set("mode", "payment");
     form.set("success_url", NEXT_PUBLIC_CHECKOUT_RETURN_URL);
@@ -54,14 +51,13 @@ export async function POST(req) {
     form.set("line_items[0][price]", priceId);
     form.set("line_items[0][quantity]", String(quantity));
 
-    // Nice-to-have: let Stripe send receipt + show email prefilled
     if (email) form.set("customer_email", email);
 
-    // Metadata to help you reconcile in webhook
-    if (userId) form.set("metadata[userId]", userId);
+    // Metadata used by the webhook
+    if (userId) form.set("metadata[user_id]", userId);
     if (email)  form.set("metadata[email]", email);
-
-    // (Optional) statement descriptor suffix or other settings could go here
+    form.set("metadata[priceKind]", priceKind);
+    form.set("metadata[credits]", String(credits));
 
     const resp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
@@ -75,7 +71,7 @@ export async function POST(req) {
 
     const text = await resp.text();
     let data = null;
-    try { data = JSON.parse(text); } catch { /* keep raw text for error clarity */ }
+    try { data = JSON.parse(text); } catch {}
 
     if (!resp.ok || !data?.url) {
       const err = data?.error?.message || text || `HTTP ${resp.status}`;
@@ -89,7 +85,6 @@ export async function POST(req) {
   }
 }
 
-// Explicit GET -> 405 (helps catch accidental GETs)
 export async function GET() {
   return NextResponse.json({ ok: false, error: "Method Not Allowed" }, { status: 405 });
 }
