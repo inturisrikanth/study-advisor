@@ -4,18 +4,13 @@ import { Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 function SuccessInner() {
   const search = useSearchParams();
   const router = useRouter();
 
-  // Optional: read Stripe session_id if you want to display it
   const sessionId = search.get('session_id') || '';
 
   useEffect(() => {
-    // Gentle auto-redirect back to SOPs tab
     const t = setTimeout(() => {
       router.replace('/app#sopsPanel');
     }, 2000);
@@ -49,7 +44,6 @@ function SuccessInner() {
 }
 
 export default function Page() {
-  // Wrap the client hook usage with Suspense to satisfy Next.js
   return (
     <Suspense fallback={
       <main style={{maxWidth:720, margin:'64px auto', padding:'0 16px', fontFamily:'system-ui, Arial'}}>

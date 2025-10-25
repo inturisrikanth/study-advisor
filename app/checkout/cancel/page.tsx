@@ -4,18 +4,13 @@ import { Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 function CancelInner() {
   const search = useSearchParams();
   const router = useRouter();
 
-  // Optional: read anything Stripe sent back
   const sessionId = search.get('session_id') || '';
 
   useEffect(() => {
-    // Optional auto-return to SOPs (or auth) after a short delay
     const t = setTimeout(() => {
       router.replace('/app#sopsPanel');
     }, 2500);
