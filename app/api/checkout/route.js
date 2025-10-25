@@ -14,7 +14,7 @@ export async function POST(req) {
       STRIPE_PRICE_PACK,
       NEXT_PUBLIC_CHECKOUT_RETURN_URL, // optional override
       NEXT_PUBLIC_CHECKOUT_CANCEL_URL, // optional override
-      NEXT_PUBLIC_SITE_URL,            // optional (e.g. prod domain)
+      NEXT_PUBLIC_SITE_URL,            // optional (explicit domain)
     } = process.env;
 
     if (!STRIPE_SECRET_KEY) {
@@ -30,31 +30,31 @@ export async function POST(req) {
 
     // Accept either `which` ("single" | "bundle") or legacy `plan` ("one" | "pack")
     const raw = (body.which || body.plan || "").toString().toLowerCase();
-    const which = raw === "bundle" || raw === "pack" ? "bundle" : "single";
+    const isBundle = raw === "bundle" || raw === "pack";
+    const priceId  = isBundle ? STRIPE_PRICE_PACK : STRIPE_PRICE_ONE;
+    const credits  = isBundle ? 4 : 1;
+    const priceKind = isBundle ? "bundle" : "single";
 
     const userId = typeof body.userId === "string" ? body.userId : "";
     const email  = typeof body.email === "string" ? body.email : "";
 
-    // Price mapping
-    const isBundle = which === "bundle";
-    const priceId  = isBundle ? STRIPE_PRICE_PACK : STRIPE_PRICE_ONE;
-    const quantity = 1;           // bundle is priced as 1 line item
-    const credits  = isBundle ? 4 : 1;
-    const priceKind = isBundle ? "bundle" : "single";
-
-    // ===== Build return URLs =====
-    // Prefer explicit site URL if provided; otherwise derive from the request.
+    // ===== Build return URLs (never fall back to /docs/app.html) =====
+    // Prefer explicit site URL; otherwise derive from this request.
     const reqUrl = new URL(req.url);
+    const derivedOrigin = `${reqUrl.protocol}//${reqUrl.host}`;
     const origin = (NEXT_PUBLIC_SITE_URL && NEXT_PUBLIC_SITE_URL.trim())
       ? NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")
-      : `${reqUrl.protocol}//${reqUrl.host}`;
+      : derivedOrigin;
 
-    // If env overrides are present, use them; otherwise default to our Next routes.
-    const successUrl = (NEXT_PUBLIC_CHECKOUT_RETURN_URL && NEXT_PUBLIC_CHECKOUT_RETURN_URL.trim())
+    // Only trust env overrides if they point to our new routes
+    const envSuccessValid = (NEXT_PUBLIC_CHECKOUT_RETURN_URL || "").includes("/checkout/success");
+    const envCancelValid  = (NEXT_PUBLIC_CHECKOUT_CANCEL_URL || "").includes("/checkout/cancel");
+
+    const successUrl = envSuccessValid
       ? NEXT_PUBLIC_CHECKOUT_RETURN_URL
       : `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
 
-    const cancelUrl = (NEXT_PUBLIC_CHECKOUT_CANCEL_URL && NEXT_PUBLIC_CHECKOUT_CANCEL_URL.trim())
+    const cancelUrl = envCancelValid
       ? NEXT_PUBLIC_CHECKOUT_CANCEL_URL
       : `${origin}/checkout/cancel`;
 
@@ -64,8 +64,7 @@ export async function POST(req) {
     form.set("success_url", successUrl);
     form.set("cancel_url", cancelUrl);
     form.set("line_items[0][price]", priceId);
-    form.set("line_items[0][quantity]", String(quantity));
-
+    form.set("line_items[0][quantity]", "1");
     if (email) form.set("customer_email", email);
 
     // Metadata for webhook / reconciliation
@@ -73,6 +72,11 @@ export async function POST(req) {
     if (email)  form.set("metadata[email]", email);
     form.set("metadata[priceKind]", priceKind);
     form.set("metadata[credits]", String(credits));
+
+    // Helpful logs (check Vercel logs if needed)
+    console.log("[checkout] origin:", origin);
+    console.log("[checkout] success_url:", successUrl);
+    console.log("[checkout] cancel_url:", cancelUrl);
 
     const resp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
