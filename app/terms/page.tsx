@@ -1,0 +1,132 @@
+// app/terms/page.tsx
+export const metadata = {
+  title: "Study Advisor — Terms of Service",
+  description:
+    "Terms of Service for Study Advisor: user responsibilities, credits, refunds, acceptable use, and legal details.",
+};
+
+export default function TermsPage() {
+  return (
+    <main>
+      <style>{`
+        :root { --max: 840px; --text:#141a27; --muted:#5b6475; --border:#e6e8f0; --link:#0a58ca; }
+        body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--text);
+               margin:0; background:#f7f9ff; }
+        .shell { max-width:var(--max); margin:48px auto; padding:0 20px; }
+        .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:26px;
+                box-shadow:0 18px 40px rgba(24,39,75,.06); }
+        h1 { margin:0 0 8px; }
+        h2 { margin:22px 0 10px; }
+        p, li { line-height:1.6; color:var(--muted); }
+        a { color:var(--link); text-decoration:none; } 
+        a:hover{ text-decoration:underline; }
+        .meta { color:#7b8497; font-size:14px; margin-bottom:14px; }
+        ul { margin:8px 0 12px 20px; }
+        .footer { text-align:center; margin-top:14px; font-size:14px; color:#7b8497; }
+      `}</style>
+
+      <div className="shell">
+        <div className="card">
+          <h1>Terms of Service</h1>
+          <div className="meta">
+            Effective date: <strong>October 14, 2025</strong>
+          </div>
+
+          <p>
+            Welcome to Study Advisor. By accessing or using our website and services
+            (“Services”), you agree to these Terms.
+          </p>
+
+          <h2>1) Service Description</h2>
+          <p>
+            We help applicants explore US universities/programs and generate Statements of
+            Purpose (SOPs) that can be downloaded as Word files. The universities list is
+            free; SOP generation uses credits.
+          </p>
+
+          <h2>2) Accounts</h2>
+          <ul>
+            <li>You must provide accurate information and keep your credentials secure.</li>
+            <li>You are responsible for activity under your account.</li>
+          </ul>
+
+          <h2>3) Termination</h2>
+          <p>
+            We may suspend or terminate your account or access to the Services if you
+            violate these Terms, misuse the platform, or engage in fraudulent activity. You
+            may also delete your account at any time by contacting us at{" "}
+            <a href="mailto:contact@studyadvisorhub.com">contact@studyadvisorhub.com</a>.
+          </p>
+
+          <h2>4) Credits, Payments &amp; Refunds</h2>
+          <ul>
+            <li>
+              Credits are purchased through our payment processor (e.g., Stripe). Taxes may
+              apply.
+            </li>
+            <li>
+              Each SOP generation deducts a credit amount shown in-app before purchase.
+            </li>
+            <li>
+              Except where required by law, credits are non-refundable once used. If a file
+              cannot be generated or is corrupted, contact us within 7 days and we’ll
+              re-issue the SOP or credit your account.
+            </li>
+          </ul>
+
+          <h2>5) Acceptable Use</h2>
+          <ul>
+            <li>No scraping, reverse engineering, or misuse of data.</li>
+            <li>Do not upload unlawful, infringing, or harmful content.</li>
+          </ul>
+
+          <h2>6) Intellectual Property</h2>
+          <p>
+            All site content and software are owned by Study Advisor or its licensors. You
+            receive a personal, non-transferable license to use the Services. You own your
+            account data and generated SOP documents.
+          </p>
+
+          <h2>7) Disclaimers</h2>
+          <p>
+            We try to keep program info current, but universities may change requirements
+            at any time. The Service is provided “as is,” without warranties of any kind.
+            Use at your own discretion.
+          </p>
+
+          <h2>8) Limitation of Liability</h2>
+          <p>
+            To the maximum extent permitted by law, Study Advisor will not be liable for
+            indirect or consequential damages. Our aggregate liability is limited to the
+            amounts you paid to us in the 3 months prior to the event.
+          </p>
+
+          <h2>9) Governing Law</h2>
+          <p>
+            These Terms are governed by and construed in accordance with the laws of the
+            State of Texas, United States, without regard to its conflict of law
+            provisions. You agree to submit to the personal jurisdiction of the courts
+            located in Texas for resolving any disputes arising from these Terms or the use
+            of our Services.
+          </p>
+
+          <h2>10) Changes</h2>
+          <p>
+            We may update these Terms. If changes are material, we’ll notify you in-app or
+            by email. Continued use means you accept the updated Terms.
+          </p>
+
+          <h2>11) Contact</h2>
+          <p>
+            Questions? Email{" "}
+            <a href="mailto:contact@studyadvisorhub.com">contact@studyadvisorhub.com</a>.
+          </p>
+
+          <p className="footer">
+            <a href="/privacy">Privacy Policy</a>
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}

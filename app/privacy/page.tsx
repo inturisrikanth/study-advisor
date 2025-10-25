@@ -1,0 +1,124 @@
+// app/privacy/page.tsx
+export const metadata = {
+  title: "Study Advisor — Privacy Policy",
+  description:
+    "Privacy Policy for Study Advisor: what data we collect, how we use it, and your choices.",
+};
+
+export default function PrivacyPage() {
+  return (
+    <main>
+      <style>{`
+        :root { --max: 840px; --text:#141a27; --muted:#5b6475; --border:#e6e8f0; --link:#0a58ca; }
+        body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--text);
+               margin:0; background:#f7f9ff; }
+        .shell { max-width:var(--max); margin:48px auto; padding:0 20px; }
+        .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:26px;
+                box-shadow:0 18px 40px rgba(24,39,75,.06); }
+        h1 { margin:0 0 8px; }
+        h2 { margin:22px 0 10px; }
+        p, li { line-height:1.6; color:var(--muted); }
+        a { color:var(--link); text-decoration:none; } 
+        a:hover{ text-decoration:underline; }
+        .meta { color:#7b8497; font-size:14px; margin-bottom:14px; }
+        ul { margin:8px 0 12px 20px; }
+        .footer { text-align:center; margin-top:14px; font-size:14px; color:#7b8497; }
+      `}</style>
+
+      <div className="shell">
+        <div className="card">
+          <h1>Privacy Policy</h1>
+          <div className="meta">
+            Effective date: <strong>{/* set a date */} October 14, 2025</strong>
+          </div>
+
+          <p>
+            This Policy explains what data we collect, how we use it, and your choices.
+          </p>
+
+          <h2>1) Data We Collect</h2>
+          <ul>
+            <li>
+              <strong>Account data:</strong> name, email, password (hashed by our auth
+              provider).
+            </li>
+            <li>
+              <strong>Usage data:</strong> saved programs, SOP inputs, generated files
+              metadata.
+            </li>
+            <li>
+              <strong>Technical data:</strong> device/browser info, IP-derived region,
+              cookies or local storage for session state.
+            </li>
+            <li>
+              <strong>Payments:</strong> handled by our processor (e.g., Stripe). We
+              receive payment status/amounts, not full card details.
+            </li>
+          </ul>
+
+          <h2>2) How We Use Data</h2>
+          <ul>
+            <li>Provide and improve the Service (search, save, generate SOPs).</li>
+            <li>Fraud prevention, security, analytics.</li>
+            <li>Customer support and important service messages.</li>
+          </ul>
+
+          <h2>3) Sharing</h2>
+          <ul>
+            <li>
+              <strong>Vendors/Processors:</strong> hosting/database (e.g., Supabase),
+              payments (e.g., Stripe), error/analytics tools.
+            </li>
+            <li>Legal or safety requirements if necessary.</li>
+            <li>We do not sell personal information.</li>
+          </ul>
+
+          <h2>4) International Transfers</h2>
+          <p>
+            Your data may be processed in the United States (our primary hosting region)
+            or other countries where our vendors operate, with appropriate safeguards.
+          </p>
+
+          <h2>5) Security &amp; Retention</h2>
+          <p>
+            We use reasonable technical/organizational measures. We keep data for as long
+            as needed to provide the Service or as required by law.
+          </p>
+
+          <h2>6) Your Rights</h2>
+          <p>
+            Depending on your region, you may request access, correction, deletion, or
+            download of your personal data. To exercise these rights, please email us at{" "}
+            <a href="mailto:contact@studyadvisorhub.com">contact@studyadvisorhub.com</a>.
+          </p>
+
+          <h2>7) Children</h2>
+          <p>
+            The Service is not directed to children under 13 (or the age required by local
+            law). We delete accounts discovered to be in violation.
+          </p>
+
+          <h2>8) Changes</h2>
+          <p>We may update this Policy from time to time. We’ll notify you of material changes.</p>
+
+          <h2>9) Contact</h2>
+          <p>
+            Email:{" "}
+            <a href="mailto:contact@studyadvisorhub.com">contact@studyadvisorhub.com</a>
+          </p>
+
+          <h2>10) Analytics</h2>
+          <p>
+            We may use privacy-conscious analytics tools to understand how users interact
+            with our platform. No personally identifiable data is tracked without your
+            consent.
+          </p>
+
+          <p className="footer">
+            <a href="/terms">Terms of Service</a>
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
