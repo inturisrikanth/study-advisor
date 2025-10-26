@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { supabaseClient as supabase } from '../../lib/supabaseClient'
+import Link from "next/link"
 
 export default function Page() {
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function Page() {
       async function refreshCreditsPill() {}  // hoisted later
 
       function switchPanel(id: string) {
-        const panels = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel','visaPanel','contactPanel']
+        const panels = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel','contactPanel']
         panels.forEach(pid => {
           const elx = document.getElementById(pid)
           if (elx) (elx as HTMLElement).style.display = (pid === id) ? 'block' : 'none'
@@ -86,10 +87,13 @@ export default function Page() {
         localStorage.setItem(RETURN_KEY, id)
       }
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchPanel((btn as HTMLElement).getAttribute('data-target')!))
+        const target = (btn as HTMLElement).getAttribute('data-target')
+        if (target) {
+          btn.addEventListener('click', () => switchPanel(target))
+        }
       })
       const initialHash = (location.hash || '#howToPanel').replace('#', '')
-      const initialPanel = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel','visaPanel','contactPanel'].includes(initialHash)
+      const initialPanel = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel','contactPanel'].includes(initialHash)
         ? initialHash
         : (localStorage.getItem(RETURN_KEY) || 'howToPanel')
       switchPanel(initialPanel as string)
@@ -915,7 +919,9 @@ export default function Page() {
             <button className="nav-btn" data-target="savedPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>⭐ Saved</button>
             <button className="nav-btn" data-target="sopsPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>✍️ SOPs</button>
             <button className="nav-btn" data-target="mySopsPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>📁 My SOPs</button>
-            <button className="nav-btn" data-target="visaPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>🛂 Visa Guidance</button>
+            <Link href="/app/visa" className="nav-btn" style={{ textAlign:'left', padding:'8px 10px', border:'none', background:'transparent', cursor:'pointer', borderRadius:6 }}>
+              🛂 Visa Guidance
+            </Link>
             <button className="nav-btn" data-target="contactPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>📮 Contact Us</button>
           </nav>
         </aside>
@@ -1128,19 +1134,7 @@ export default function Page() {
               <div id="sopList" className="muted">No SOPs yet.</div>
             </div>
           </section>
-
-          {/* Visa Guidance */}
-          <section id="visaPanel" style={{ display: 'none' }}>
-            <div className="card">
-              <h2 style={{ margin: '0 0 8px' }}>Visa Guidance</h2>
-              <div className="muted" style={{ lineHeight: 1.5 }}>
-                Coming soon. In <strong>Phase 1</strong>, you’ll have access to structured
-                questions and answers to help you prepare on your own. In <strong>Phase 2</strong>,
-                we plan to introduce live AI mock interview sessions.
-              </div>
-            </div>
-          </section>
-
+          
           {/* Contact Us */}
           <section id="contactPanel" style={{ display: 'none' }}>
             <div className="card">
