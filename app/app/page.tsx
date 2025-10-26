@@ -70,7 +70,7 @@ export default function Page() {
       async function refreshCreditsPill() {}  // hoisted later
 
       function switchPanel(id: string) {
-        const panels = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel']
+        const panels = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel','visaPanel','contactPanel']
         panels.forEach(pid => {
           const elx = document.getElementById(pid)
           if (elx) (elx as HTMLElement).style.display = (pid === id) ? 'block' : 'none'
@@ -89,7 +89,7 @@ export default function Page() {
         btn.addEventListener('click', () => switchPanel((btn as HTMLElement).getAttribute('data-target')!))
       })
       const initialHash = (location.hash || '#howToPanel').replace('#', '')
-      const initialPanel = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel'].includes(initialHash)
+      const initialPanel = ['howToPanel','universitiesPanel','savedPanel','sopsPanel','mySopsPanel','visaPanel','contactPanel'].includes(initialHash)
         ? initialHash
         : (localStorage.getItem(RETURN_KEY) || 'howToPanel')
       switchPanel(initialPanel as string)
@@ -915,6 +915,8 @@ export default function Page() {
             <button className="nav-btn" data-target="savedPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>⭐ Saved</button>
             <button className="nav-btn" data-target="sopsPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>✍️ SOPs</button>
             <button className="nav-btn" data-target="mySopsPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>📁 My SOPs</button>
+            <button className="nav-btn" data-target="visaPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>🛂 Visa Guidance</button>
+            <button className="nav-btn" data-target="contactPanel" style={{ textAlign: 'left', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 6 }}>📮 Contact Us</button>
           </nav>
         </aside>
 
@@ -1124,6 +1126,31 @@ export default function Page() {
             <div className="card">
               <h2 style={{ margin: '0 0 8px' }}>My SOPs</h2>
               <div id="sopList" className="muted">No SOPs yet.</div>
+            </div>
+          </section>
+
+          {/* Visa Guidance */}
+          <section id="visaPanel" style={{ display: 'none' }}>
+            <div className="card">
+              <h2 style={{ margin: '0 0 8px' }}>Visa Guidance</h2>
+              <div className="muted" style={{ lineHeight: 1.5 }}>
+                Coming soon. In <strong>Phase 1</strong>, you’ll have access to structured
+                questions and answers to help you prepare on your own. In <strong>Phase 2</strong>,
+                we plan to introduce live AI mock interview sessions.
+              </div>
+            </div>
+          </section>
+
+          {/* Contact Us */}
+          <section id="contactPanel" style={{ display: 'none' }}>
+            <div className="card">
+              <h2 style={{ margin: '0 0 8px' }}>Contact Us</h2>
+              <div className="muted" style={{ lineHeight: 1.5 }}>
+                For any questions about your account, payments or billing, SOP credits,
+                or general support, feel free to reach out to us at{' '}
+                <a href="mailto:contact@studyadvisorhub.com">contact@studyadvisorhub.com</a>. 
+                We typically respond within 1–2 business days.
+              </div>
             </div>
           </section>
         </main>
