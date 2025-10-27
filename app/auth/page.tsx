@@ -154,24 +154,27 @@ export default function AuthPage() {
       {/* LEFT: Info/Marketing with hero image */}
       <aside className="info">
         <div className="hero" aria-hidden="true" />
-        <span className="kicker">Built for MS applicants</span>
+        <span className="kicker">Built for CS/IT MS applicants</span>
         <h1>Plan your applications in minutes — not weeks</h1>
         <p className="sub">
-          Search programs across the US, save your shortlist, and generate polished
-          Statements of Purpose you can download as Word files.
+          Search Engineering & IT programs, save your shortlist, generate polished Statements of Purpose,
+          and prepare for your F-1 visa interview with structured learning and mock interviews.
         </p>
 
         <table className="benefits" role="presentation">
           <tbody>
             <tr>
               <td style={{ width: 26 }} className="tick">✓</td>
-              <td><strong>Complete US universities catalog</strong></td>
-              <td>Major MS programs (CS, DS, AI, Cyber, IS, SE, MBA) with GRE/TOEFL/IELTS/Duolingo and STEM OPT details.</td>
+              <td><strong>US programs for Engineering & IT</strong></td>
+              <td>
+                Focused on: Computer Science, Data Science, AI/ML, Cybersecurity, Information Systems,
+                Software Engineering, Computer Engineering, Data Analytics, and Computer Networks.
+              </td>
             </tr>
             <tr>
               <td className="tick">✓</td>
               <td><strong>Smart filters</strong></td>
-              <td>Minimum scores, GRE-optional toggle, STEM-only, program keyword.</td>
+              <td>Minimum scores, GRE-optional toggle, STEM-only filter, program keyword search.</td>
             </tr>
             <tr>
               <td className="tick">✓</td>
@@ -181,12 +184,22 @@ export default function AuthPage() {
             <tr>
               <td className="tick">✓</td>
               <td><strong>Fast SOP generator</strong></td>
-              <td>Prefill university + program, add your details, and download a .doc.</td>
+              <td>Prefill university + program, add your details, and download a Word (.doc) file.</td>
+            </tr>
+            <tr>
+              <td className="tick">✓</td>
+              <td><strong>Visa Guidance — Phase 1</strong></td>
+              <td>Learn with curated Q&A for common F-1 interview questions, plus concise prep tips.</td>
+            </tr>
+            <tr>
+              <td className="tick">✓</td>
+              <td><strong>Visa Guidance — Phase 2</strong></td>
+              <td>Live AI mock visa interview sessions for realistic practice.</td>
             </tr>
             <tr>
               <td className="tick">✓</td>
               <td><strong>Credit-based billing</strong></td>
-              <td>Pay only for what you generate; universities list stays free.</td>
+              <td>Pay only for SOPs and Visa Guidance — Phase 2 (mock interviews); the universities list and Visa Guidance — Phase 1 (learning) are free.</td>
             </tr>
             <tr>
               <td className="tick">✓</td>
@@ -197,7 +210,8 @@ export default function AuthPage() {
         </table>
 
         <div className="microflow">
-          <strong>How it works:</strong> Universities → Save → Generate SOP → Download → Apply 🎓
+          <strong>How it works:</strong> Universities → Save → Generate SOP → Apply for Admission 🎓  
+          Then → Visa Guidance (Phase 1 Learning) → Mock Interview (Phase 2 Practice) → Attend Visa Interview 🛂
         </div>
       </aside>
 
@@ -283,7 +297,7 @@ export default function AuthPage() {
         </section>
       </main>
 
-      {/* Bring over your original CSS 1:1 */}
+      {/* Styles */}
       <style jsx global>{`
         :root{
           --bg1:#f7f9ff;
@@ -411,7 +425,7 @@ export default function AuthPage() {
         .input-row{ position:relative; }
         .toggle-pass{
           position:absolute; right:10px; top:50%; transform:translateY(-50%);
-          font-size:12px; color:var(--primary); background:transparent; border:none; cursor:pointer.
+          font-size:12px; color:var(--primary); background:transparent; border:none; cursor:pointer;
         }
         .btn{
           width:100%; padding:12px 14px; font-size:15px; border-radius:10px;

@@ -57,6 +57,46 @@ export const VISA_QA: VisaQA[] = [
       "I applied to programs with similar strengths. I chose this one because its coursework and co-op model best fit my goals.",
     tips: ["Be honest about admits/declines.", "Always end with why you chose this one."]
   },
+  {
+    id: "fit-vs-other-admit",
+    category: "University & Program",
+    question: "Why did you choose this admit over your other admits?",
+    answer:
+      "This program offers stronger coursework in distributed data systems and a co-op structure that aligns with my goal to work on production ML pipelines.",
+    tips: ["Compare on 1–2 academic points.", "End with a decisive reason."]
+  },
+  {
+    id: "program-deliverables",
+    category: "University & Program",
+    question: "What are the key deliverables or outcomes from your program?",
+    answer:
+      "A capstone with an industry partner, advanced coursework in data engineering, and practicum experience that prepares me for ML engineering roles.",
+    tips: ["Name capstone/practicum.", "Tie outcomes to target roles."]
+  },
+  {
+    id: "faculty-alignment",
+    category: "University & Program",
+    question: "Which faculty or labs align with your interests?",
+    answer:
+      "The systems and ML group matches my focus on scalable model serving. Their recent projects on real-time inference are directly relevant.",
+    tips: ["Avoid listing many names.", "One lab + why it matters."]
+  },
+  {
+    id: "deferral-question",
+    category: "University & Program",
+    question: "If the start term is deferred, what will you do?",
+    answer:
+      "I will continue upskilling through online coursework and applied projects, so I join the program with stronger preparation.",
+    tips: ["Show proactive plan.", "Avoid sounding uncertain about studying."]
+  },
+  {
+    id: "online-vs-oncampus",
+    category: "University & Program",
+    question: "Why on-campus instead of an online program?",
+    answer:
+      "On-campus learning provides access to labs, peer collaboration, and co-ops that are essential to my hands-on goals.",
+    tips: ["Emphasize labs/networking.", "Keep it short."]
+  },
 
   // ---------- Background ----------
   {
@@ -82,6 +122,39 @@ export const VISA_QA: VisaQA[] = [
     answer:
       "No. (If yes: I have close relatives in <city>. They are not sponsoring my education, and my plans remain focused on study and returning per visa regulations.)",
     tips: ["Answer truthfully.", "Clarify independence of plans and funding."]
+  },
+
+  {
+    id: "work-experience-relevance",
+    category: "Background",
+    question: "How does your work experience relate to this program?",
+    answer:
+      "I worked on data pipelines and analytics dashboards. This program deepens my skills in scalable systems and model deployment.",
+    tips: ["Connect experience → skill gaps → program."]
+  },
+  {
+    id: "field-switch",
+    category: "Background",
+    question: "You’re switching fields—why is this credible?",
+    answer:
+      "My projects and certifications are already in data/ML. The degree formalizes the foundation and prepares me for production roles.",
+    tips: ["Show prior steps taken.", "Be confident, not defensive."]
+  },
+  {
+    id: "break-between-studies",
+    category: "Background",
+    question: "What did you do during your gap/break?",
+    answer:
+      "I completed internships and online coursework, and built two portfolio projects to strengthen my profile.",
+    tips: ["List measurable activities.", "Avoid vague statements."]
+  },
+  {
+    id: "influenced-by-someone",
+    category: "Background",
+    question: "Who influenced your decision to pursue this degree?",
+    answer:
+      "Mentors at work and alumni from this program shared how advanced systems skills accelerated their careers. Their guidance helped me decide.",
+    tips: ["Don’t say “family pressure”.", "Keep it professional."]
   },
 
   // ---------- Academics ----------
@@ -117,6 +190,47 @@ export const VISA_QA: VisaQA[] = [
       "I prepared with timed practice tests and focused on academic writing and listening skills. My score reflects readiness for graduate-level coursework.",
     tips: ["Keep it simple.", "Mention one specific practice method."]
   },
+  {
+    id: "research-experience",
+    category: "Academics",
+    question: "Do you have research experience?",
+    answer:
+      "I worked on a course project analyzing streaming data and co-authored a short paper at a local symposium. It sparked my interest in scalable analytics.",
+    tips: ["If no paper, cite a substantial project.", "Be specific."]
+  },
+  {
+    id: "standardized-test-low",
+    category: "Academics",
+    question: "Your standardized test score is low—how will you cope?",
+    answer:
+      "My core grades and recent projects reflect my ability. I’ve improved my study methods and performed well in advanced subjects.",
+    tips: ["Point to strong evidence.", "Stay positive, no excuses."]
+  },
+  {
+    id: "waiver-awareness",
+    category: "Academics",
+    question: "Was your GRE/English test waived? Why?",
+    answer:
+      "The university waived it based on my prior academics and medium of instruction. I’m prepared for graduate-level work.",
+    tips: ["Keep it factual.", "Do not over-explain."]
+  },
+  {
+    id: "project-highlight",
+    category: "Academics",
+    question: "Describe a key academic project and your role.",
+    answer:
+      "I led a pipeline to process event data and built a feature store for model training. It improved training freshness and accuracy.",
+    tips: ["Focus on your contribution + impact."]
+  },
+  {
+    id: "academic-honesty",
+    category: "Academics",
+    question: "How do you ensure academic integrity?",
+    answer:
+      "I follow university honor codes, cite sources, and collaborate only within defined guidelines.",
+    tips: ["Straightforward, values-based answer."]
+  },
+
 
   // ---------- Finances ----------
   {
@@ -159,6 +273,54 @@ export const VISA_QA: VisaQA[] = [
       "Funds are in family savings and an approved education loan. The totals comfortably cover year-one tuition and living costs, with additional reserves for year two.",
     tips: ["Stay high-level; no itemized list needed.", "Be consistent with bank/loan letters."]
   },
+  {
+    id: "tuition-breakdown",
+    category: "Finances",
+    question: "What is your estimated tuition and living cost?",
+    answer:
+      "Based on the I-20 and university website, year-one tuition is approximately $X and living expenses about $Y. We’ve planned funds accordingly.",
+    tips: ["Know your ballpark numbers.", "Stay consistent with I-20."]
+  },
+  {
+    id: "sponsor-occupation",
+    category: "Finances",
+    question: "What is your sponsor’s occupation and income source?",
+    answer:
+      "My sponsor is a <profession> with stable income and savings earmarked for my education.",
+    tips: ["Keep it concise.", "No unnecessary financial details."]
+  },
+  {
+    id: "multiple-sponsors",
+    category: "Finances",
+    question: "You have multiple sponsors—why?",
+    answer:
+      "Family members are sharing responsibility and the funds are documented. This provides a comfortable safety margin.",
+    tips: ["Stress documentation + sufficiency."]
+  },
+  {
+    id: "recent-large-deposits",
+    category: "Finances",
+    question: "Explain the recent large deposits in your account.",
+    answer:
+      "They are consolidated family savings moved for fee planning. We have statements to show the source and timing.",
+    tips: ["Avoid sounding evasive.", "Tie to legitimate sources."]
+  },
+  {
+    id: "part-time-dependence",
+    category: "Finances",
+    question: "Are you relying on part-time work for tuition?",
+    answer:
+      "No. Tuition and living costs are covered by savings and a loan. Any on-campus role would be supplementary and within visa limits.",
+    tips: ["Reassure self-sufficiency.", "Stay within regulations."]
+  },
+  {
+    id: "currency-risk",
+    category: "Finances",
+    question: "How will you handle exchange rate fluctuations?",
+    answer:
+      "We’ve budgeted a buffer in local currency and USD to manage normal fluctuations without affecting my studies.",
+    tips: ["Show prudence.", "Keep it simple."]
+  },
 
   // ---------- Career Plans ----------
   {
@@ -193,6 +355,46 @@ export const VISA_QA: VisaQA[] = [
       "It fills specific gaps in scalable data systems and gives me practical project experience, making me competitive for the roles I’m targeting.",
     tips: ["Name 1–2 concrete skill gaps.", "Link to job functions."]
   },
+  {
+    id: "preferred-role",
+    category: "Career Plans",
+    question: "Which exact roles are you targeting after graduation?",
+    answer:
+      "Data Engineer or ML Engineer roles focused on building pipelines, feature stores, and model serving systems.",
+    tips: ["Use role names used in the market."]
+  },
+  {
+    id: "internship-plan",
+    category: "Career Plans",
+    question: "What’s your plan for internships?",
+    answer:
+      "Leverage the university career center, alumni network, and faculty referrals. I’ll target roles that develop production data skills.",
+    tips: ["Show a concrete plan.", "Avoid naming one company."]
+  },
+  {
+    id: "salary-expectation",
+    category: "Career Plans",
+    question: "What salary do you expect after graduation?",
+    answer:
+      "It varies by company and location. My focus is on roles that offer growth in data platforms and applied ML.",
+    tips: ["Avoid quoting exact figures.", "Focus on growth/fit."]
+  },
+  {
+    id: "startup-vs-enterprise",
+    category: "Career Plans",
+    question: "Startup or large company—what do you prefer?",
+    answer:
+      "I’m open to both: startups for breadth and speed, enterprises for scale and mature systems. I’ll choose based on the learning fit.",
+    tips: ["Balanced answer shows maturity."]
+  },
+  {
+    id: "home-country-market",
+    category: "Career Plans",
+    question: "How will you use these skills in your home country?",
+    answer:
+      "Data platforms are scaling in my home market. I plan to apply these systems skills in sectors like fintech and logistics.",
+    tips: ["Name 1–2 sectors back home."]
+  },
 
   // ---------- Home Ties ----------
   {
@@ -218,6 +420,30 @@ export const VISA_QA: VisaQA[] = [
     answer:
       "I am single. My family is in my home country, and my plans are to return after studies to pursue my career there.",
     tips: ["Keep it factual.", "Reinforce ties briefly if relevant."]
+  },
+  {
+    id: "family-dependents",
+    category: "Home Ties",
+    question: "Do your family members depend on you?",
+    answer:
+      "Yes, I share responsibilities at home. My long-term plan is to return and contribute locally after completing my degree.",
+    tips: ["Reinforce return intent naturally."]
+  },
+  {
+    id: "community-connections",
+    category: "Home Ties",
+    question: "What community connections do you have?",
+    answer:
+      "I’m active in local technical meetups and volunteer mentoring. I want to bring back specialized skills to these communities.",
+    tips: ["Keep it authentic and brief."]
+  },
+  {
+    id: "long-term-location",
+    category: "Home Ties",
+    question: "Where do you see yourself living long-term?",
+    answer:
+      "In my home country, leading data platform initiatives and supporting local tech growth.",
+    tips: ["Simple and consistent with non-immigrant intent."]
   },
 
   // ---------- Compliance ----------
@@ -245,6 +471,47 @@ export const VISA_QA: VisaQA[] = [
       "The I-20 confirms my admission and program details; SEVIS maintains my student status. I must stay full-time and comply with reporting rules.",
     tips: ["Show basic awareness.", "Avoid turning it into a lecture."]
   },
+  {
+    id: "cpt-awareness",
+    category: "Compliance",
+    question: "What is CPT and when can you use it?",
+    answer:
+      "Curricular Practical Training is employment integral to the curriculum, typically available after completing required credits and with school authorization.",
+    tips: ["Keep it accurate and brief."]
+  },
+  {
+    id: "opt-awareness",
+    category: "Compliance",
+    question: "What is OPT and what are its limits?",
+    answer:
+      "Optional Practical Training allows up to 12 months of work in the field after graduation, with possible STEM extension as per rules.",
+    tips: ["Don’t promise specifics.", "Show basic awareness."]
+  },
+  {
+    id: "status-maintenance",
+    category: "Compliance",
+    question: "How will you maintain your F-1 status?",
+    answer:
+      "Stay full-time, report changes to the DSO, and work only within authorized limits.",
+    tips: ["Short, confident answer."]
+  },
+  {
+    id: "transfer-schools",
+    category: "Compliance",
+    question: "Will you transfer to another school?",
+    answer:
+      "I don’t plan to. I chose this program carefully for its curriculum and co-op opportunities.",
+    tips: ["Reaffirm your committed choice."]
+  },
+  {
+    id: "dependent-visa",
+    category: "Compliance",
+    question: "Will any dependents accompany you?",
+    answer:
+      "No. (If yes: My spouse will apply for an F-2 visa and will not work in the U.S., in line with regulations.)",
+    tips: ["Be precise and compliant."]
+  },
+
 
   // ---------- Logistics ----------
   {
@@ -278,5 +545,62 @@ export const VISA_QA: VisaQA[] = [
     answer:
       "I may explore on-campus roles permitted under my visa, ensuring academics remain my priority.",
     tips: ["Stay within visa limits.", "Don’t rely on off-campus work."]
+  },
+  {
+    id: "flight-plan",
+    category: "Logistics",
+    question: "When do you plan to travel to the U.S.?",
+    answer:
+      "I plan to arrive 2–3 weeks before orientation to settle housing and complete onboarding tasks.",
+    tips: ["Show practical planning.", "Don’t cut it too close."]
+  },
+  {
+    id: "packing-priorities",
+    category: "Logistics",
+    question: "What are your packing priorities?",
+    answer:
+      "Documents, a laptop suitable for coursework, basic essentials, and items recommended by the university.",
+    tips: ["Keep it simple.", "Mention documents first."]
+  },
+  {
+    id: "health-insurance",
+    category: "Logistics",
+    question: "What about health insurance?",
+    answer:
+      "I’ll enroll in the university-recommended plan or its approved equivalent to ensure continuous coverage.",
+    tips: ["Show awareness of mandatory coverage."]
+  },
+  {
+    id: "transport-commute",
+    category: "Logistics",
+    question: "How will you commute to campus?",
+    answer:
+      "I’ve reviewed transit options near campus and will choose based on my housing location and schedule.",
+    tips: ["No need for exact routes.", "Prepared yet flexible."]
+  },
+  {
+    id: "orientation-tasks",
+    category: "Logistics",
+    question: "Which initial tasks will you complete on arrival?",
+    answer:
+      "Complete check-in with the DSO, set up bank account/phone, finalize housing, and attend orientation and advising.",
+    tips: ["List 3–4 realistic tasks."]
+  },
+  {
+    id: "weather-readiness",
+    category: "Logistics",
+    question: "Are you prepared for the local weather?",
+    answer:
+      "Yes. I’ve checked seasonal conditions and will plan appropriate clothing and commute timing.",
+    tips: ["Shows practical awareness."]
+  },
+  {
+    id: "emergency-plan",
+    category: "Logistics",
+    question: "What is your emergency plan in the U.S.?",
+    answer:
+      "I’ll maintain updated contacts with the university, keep key documents backed up, and follow campus safety guidance.",
+    tips: ["Calm, responsible tone."]
   }
+
 ]
