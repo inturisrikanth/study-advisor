@@ -52,6 +52,7 @@ export async function POST(req) {
 
     // Get the full session with line items
     const session = event.data.object;
+
     // optional: ignore if not paid (belt & suspenders)
     if (session?.payment_status && session.payment_status !== "paid") {
       return NextResponse.json({ ok: true, ignored: "payment_status != paid" });
@@ -102,7 +103,7 @@ export async function POST(req) {
     // ---- Determine how many credits to add
     let addCredits = 0;
 
-    // (1) Most explicit: metadata.credits (set by /api/checkout we updated)
+    // (1) Most explicit: metadata.credits (set by /api/checkout)
     const metaCreditsRaw =
       full?.metadata?.credits ??
       session?.metadata?.credits ??
@@ -146,16 +147,30 @@ export async function POST(req) {
       );
     }
 
-    // ---- Update credits in Supabase
+    // ---- Supabase headers
     const headers = {
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       "Content-Type": "application/json",
     };
 
-    // Fetch current balance (if any)
+    // ---- Idempotency: ignore repeat deliveries of the same event
+    try {
+      const checkEvt = await fetch(
+        `${SUPABASE_URL}/rest/v1/stripe_events?event_id=eq.${encodeURIComponent(event.id)}&select=event_id`,
+        { headers, cache: "no-store" }
+      );
+      const seenRows = await checkEvt.json().catch(() => []);
+      if (Array.isArray(seenRows) && seenRows.length > 0) {
+        return NextResponse.json({ ok: true, ignored: "duplicate_event" });
+      }
+    } catch {
+      // If idempotency check fails, proceed cautiously (better to risk a no-op than a crash).
+    }
+
+    // ---- Fetch current balance (sop_credits)
     const getRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/credits?user_id=eq.${encodeURIComponent(userId)}&select=balance`,
+      `${SUPABASE_URL}/rest/v1/sop_credits?user_id=eq.${encodeURIComponent(userId)}&select=credits`,
       { headers, cache: "no-store" }
     );
     if (!getRes.ok) {
@@ -164,18 +179,19 @@ export async function POST(req) {
     }
     const rows = await getRes.json().catch(() => []);
     const current =
-      Array.isArray(rows) && rows.length > 0 && rows[0] && Number.isFinite(Number(rows[0].balance))
-        ? Number(rows[0].balance)
+      Array.isArray(rows) && rows.length > 0 && rows[0] && Number.isFinite(Number(rows[0].credits))
+        ? Number(rows[0].credits)
         : 0;
 
     const newBal = current + addCredits;
 
+    // ---- Upsert into sop_credits
     if (!Array.isArray(rows) || rows.length === 0) {
       // Insert new row
-      const ins = await fetch(`${SUPABASE_URL}/rest/v1/credits`, {
+      const ins = await fetch(`${SUPABASE_URL}/rest/v1/sop_credits`, {
         method: "POST",
         headers: { ...headers, Prefer: "resolution=merge-duplicates,return=representation" },
-        body: JSON.stringify({ user_id: userId, balance: newBal }),
+        body: JSON.stringify({ user_id: userId, credits: newBal }),
       });
       if (!ins.ok) {
         const t = await ins.text();
@@ -184,11 +200,11 @@ export async function POST(req) {
     } else {
       // Update existing row
       const upd = await fetch(
-        `${SUPABASE_URL}/rest/v1/credits?user_id=eq.${encodeURIComponent(userId)}`,
+        `${SUPABASE_URL}/rest/v1/sop_credits?user_id=eq.${encodeURIComponent(userId)}`,
         {
           method: "PATCH",
           headers: { ...headers, Prefer: "return=representation" },
-          body: JSON.stringify({ balance: newBal }),
+          body: JSON.stringify({ credits: newBal }),
         }
       );
       if (!upd.ok) {
@@ -197,11 +213,32 @@ export async function POST(req) {
       }
     }
 
+    // ---- Record idempotency marker
+    await fetch(`${SUPABASE_URL}/rest/v1/stripe_events`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ event_id: event.id }),
+    }).catch(() => {});
+
+    // ---- Optional: write an audit ledger row
+    await fetch(`${SUPABASE_URL}/rest/v1/credit_ledger`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        user_id: userId,
+        delta: addCredits,
+        reason: "stripe",
+        reference_id: event.id,
+        old_balance: current,
+        new_balance: newBal,
+      }),
+    }).catch(() => {});
+
     return NextResponse.json({
       ok: true,
       user_id: userId,
       added: addCredits,
-      balance: newBal,
+      balance: newBal, // kept as "balance" for compatibility with any existing logs
     });
   } catch (e) {
     console.error("Webhook error:", e);
