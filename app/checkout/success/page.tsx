@@ -1,21 +1,43 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function SuccessInner() {
   const search = useSearchParams();
-  const router = useRouter();
 
   const sessionId = search.get('session_id') || '';
+  const [target, setTarget] = useState('/app#sopsPanel');
+  const [label, setLabel] = useState('SOPs');
 
   useEffect(() => {
+    let dest = '/app#sopsPanel';
+    let lbl = 'SOPs';
+
+    try {
+      const src = localStorage.getItem('last_credit_source');
+      if (src === 'visa') {
+        dest = '/app/visa#phase2';
+        lbl = 'Visa mock interview';
+      } else if (src === 'sop') {
+        dest = '/app#sopsPanel';
+        lbl = 'SOPs';
+      }
+    } catch {
+      // ignore, use defaults
+    }
+
+    setTarget(dest);
+    setLabel(lbl);
+
     const t = setTimeout(() => {
-      router.replace('/app#sopsPanel');
+      // use full navigation so the #phase2 hash is preserved
+      window.location.href = dest;
     }, 2000);
+
     return () => clearTimeout(t);
-  }, [router]);
+  }, []);
 
   return (
     <main style={{maxWidth:720, margin:'64px auto', padding:'0 16px', fontFamily:'system-ui, Arial'}}>
@@ -30,12 +52,21 @@ function SuccessInner() {
           </p>
         ) : null}
         <p style={{color:'#475467', margin:'0 0 16px'}}>
-          Redirecting you to the <strong>SOPs</strong> tab…
+          Redirecting you to the <strong>{label}</strong> page…
         </p>
-        <Link href="/app#sopsPanel" className="btn" style={{
-          display:'inline-block', padding:'10px 12px', borderRadius:8,
-          border:'1px solid #0a58ca', background:'#0a58ca', color:'#fff', textDecoration:'none'
-        }}>
+        <Link
+          href={target}
+          className="btn"
+          style={{
+            display:'inline-block',
+            padding:'10px 12px',
+            borderRadius:8,
+            border:'1px solid #0a58ca',
+            background:'#0a58ca',
+            color:'#fff',
+            textDecoration:'none'
+          }}
+        >
           Go now
         </Link>
       </div>

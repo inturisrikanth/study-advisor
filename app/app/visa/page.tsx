@@ -15,7 +15,7 @@ function newClientTurnToken() {
 async function authHeaders(): Promise<Record<string, string>> {
   try {
     // always try to refresh first
-    const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession()
+    const { data: refreshed } = await supabase.auth.refreshSession()
     const active = refreshed?.session ?? (await supabase.auth.getSession()).data?.session
     const token = active?.access_token
     return token ? { Authorization: `Bearer ${token}` } : {}
@@ -198,6 +198,9 @@ export default function VisaGuidancePage() {
 
   // ⭐ NEW: keep max_turns from backend so we can display 7/20
   const [maxTurns, setMaxTurns] = useState<number | null>(null)
+
+  // ⭐ NEW: show buy-credits modal (for visa)
+  const [showBuyModal, setShowBuyModal] = useState(false)
 
   // Mic / speech
   const [micSupported, setMicSupported] = useState(false)
@@ -578,6 +581,36 @@ export default function VisaGuidancePage() {
     setShowInterviewWindow(false)
   }
 
+  // ====== Buy credits from visa page ======
+  const handleBuyCredits = async (which: 'single' | 'bundle') => {
+    try {
+      // try to get current user to pass to checkout (optional, but good)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      const body: any = { which }
+      if (user?.id) body.userId = user.id
+      if (user?.email) body.email = user.email
+
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.ok || !data?.url) {
+        alert(data?.error || 'Could not start checkout.')
+        return
+      }
+      // redirect to Stripe
+      window.location.href = data.url
+    } catch (err) {
+      console.error('Buy credits failed:', err)
+      alert('Could not start checkout. Please try again.')
+    }
+  }
+
   // ================== Phase 1 content ==================
   const PhaseOneContent = (
     <div className="card">
@@ -912,9 +945,17 @@ export default function VisaGuidancePage() {
         >
           {p2Loading ? 'Starting…' : 'Start Interview'}
         </button>
-        <Link href="/app" className="btn">
+
+        {/* CHANGED: remember source before opening the Buy Credits modal */}
+        <button
+          className="btn"
+          onClick={() => {
+            localStorage.setItem('last_credit_source', 'visa');
+            setShowBuyModal(true);
+          }}
+        >
           Buy Credits
-        </Link>
+        </button>
       </div>
 
       <div className="card soft" style={{ marginTop: 12 }}>
@@ -1096,6 +1137,10 @@ export default function VisaGuidancePage() {
         .win-actions { display:flex; gap:6px; }
         .win-btn { border:1px solid #dcdcdc; background:#fff; border-radius:6px; padding:4px 10px; cursor:pointer; }
         .win-btn:hover { background:#f6f6f6; }
+
+        .buy-modal { width: min(460px, 96vw); background:#fff; border:1px solid #e5e7eb; border-radius: 14px; overflow:hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2); display:flex; flex-direction:column; }
+        .buy-head { padding:12px 14px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; }
+        .buy-body { padding:14px; display:flex; flex-direction:column; gap:10px; }
       `}</style>
 
       <header className="vtop">
@@ -1163,6 +1208,39 @@ export default function VisaGuidancePage() {
           {tab === 'phase2' && PhaseTwoContent}
         </section>
       </div>
+
+      {/* BUY CREDITS MODAL */}
+      {showBuyModal && (
+        <div className="overlay" onClick={() => setShowBuyModal(false)}>
+          <div className="buy-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="buy-head">
+              <div>
+                <strong>Buy credits</strong>
+                <p className="muted" style={{ marginTop: 2 }}>
+                  Visa mock interview needs <strong>{INTERVIEW_PRICE_CREDITS}</strong> credits.
+                </p>
+                <p className="muted" style={{ marginTop: 2 }}>
+                  Your balance: <strong>{credits ?? '—'}</strong>
+                </p>
+              </div>
+              <button className="win-btn danger" onClick={() => setShowBuyModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="buy-body">
+              <button className="btn primary" onClick={() => handleBuyCredits('single')}>
+                Buy 1 credit — $10
+              </button>
+              <button className="btn" onClick={() => handleBuyCredits('bundle')}>
+                Buy 4 credits — $30
+              </button>
+              <p className="muted" style={{ fontSize: 12 }}>
+                You can use credits anywhere in the dashboard (SOP, Visa mock, future features).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
