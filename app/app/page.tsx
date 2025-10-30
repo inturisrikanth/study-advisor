@@ -15,15 +15,14 @@ export default function Page() {
     const el = (id: string) => document.getElementById(id)!
 
     ;(async () => {
-      // 👇 ADD THESE LINES RIGHT HERE (very top of the IIFE)
       try {
         const hadCode = /\b(code|access_token|refresh_token|provider_token)=/.test(location.href);
         await supabase.auth.exchangeCodeForSession(window.location.href);
         if (hadCode) {
-            // remove auth params like ?code=… from the URL
-            history.replaceState(null, '', '/app');
+          history.replaceState(null, '', '/app');
         }
       } catch {}
+
       // ===== Auth guard
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { location.href = LANDING_URL; return }
@@ -448,7 +447,6 @@ export default function Page() {
 
         base = applySort(base, STATE.lastSort).range(from, to)
 
-        // Use wide types so fallback reassignment is safe
         const res1 = await base as any
         let data: any[] | null = res1.data ?? null
         let error: any = res1.error ?? null
@@ -456,18 +454,18 @@ export default function Page() {
 
         let usedFallback = false
         if (error && /column.*(state|country)/i.test(error.message)) {
-            usedFallback = true
-            let q2 = supabase
-                .from('programs_view')
-                .select('program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months')
-            if (f.program) q2 = q2.ilike('name', `%${f.program}%`)
-            if (f.onlyStem) q2 = q2.eq('stem', 'Y')
-            q2 = applySort(q2, STATE.lastSort).range(from, to)
+          usedFallback = true
+          let q2 = supabase
+            .from('programs_view')
+            .select('program_id, university_name, name, gre_required, gre_min_total, english_tests_accepted, toefl_min_total, ielts_min_total, duolingo_min_total, tuition_usd_per_year, website_url, stem, opt_months')
+          if (f.program) q2 = q2.ilike('name', `%${f.program}%`)
+          if (f.onlyStem) q2 = q2.eq('stem', 'Y')
+          q2 = applySort(q2, STATE.lastSort).range(from, to)
 
-            const res2 = await q2 as any
-            data  = res2.data  ?? null
-            error = res2.error ?? null
-            count = (res2.count ?? null) as number | null
+          const res2 = await q2 as any
+          data  = res2.data  ?? null
+          error = res2.error ?? null
+          count = (res2.count ?? null) as number | null
         }
 
         if (error) { (document.getElementById('status') as HTMLElement).textContent = 'Error: ' + error.message; return }
@@ -569,33 +567,6 @@ export default function Page() {
         })
       }
 
-      // Search & controls
-      document.getElementById('searchBtn')?.addEventListener('click', () => { STATE.page = 1; search() })
-      document.getElementById('clearBtn')?.addEventListener('click', () => {
-        ;['gre','toefl','ielts','duolingo'].forEach(id => { const i = document.getElementById(id) as HTMLInputElement | null; if (i) i.value = '' })
-        const programSel = document.getElementById('program') as HTMLSelectElement | null; if (programSel) programSel.value = ''
-        const stateSel = document.getElementById('state') as HTMLSelectElement | null; if (stateSel) stateSel.value = ''
-        const countrySel = document.getElementById('country') as HTMLSelectElement | null; if (countrySel) countrySel.value = ''
-        ;(document.getElementById('onlyGreOptional') as HTMLInputElement).checked = false
-        ;(document.getElementById('onlyStem') as HTMLInputElement).checked = false
-        ;(document.getElementById('sortBy') as HTMLSelectElement).value = 'uni_asc'
-        STATE.page = 1
-        STATE.lastSort = 'uni_asc'
-        search()
-      })
-      document.getElementById('sortBy')?.addEventListener('change', (e:any) => {
-        STATE.lastSort = e.target.value || 'uni_asc'
-        STATE.page = 1
-        search()
-      })
-      document.getElementById('prevPage')?.addEventListener('click', () => {
-        if (STATE.page > 1) { STATE.page -= 1; search() }
-      })
-      document.getElementById('nextPage')?.addEventListener('click', () => {
-        const totalPages = Math.max(1, Math.ceil(STATE.total / STATE.pageSize))
-        if (STATE.page < totalPages) { STATE.page += 1; search() }
-      })
-
       // Initial boot
       await populateProgramsSelect()
       await populateCountriesSelect()
@@ -651,6 +622,7 @@ export default function Page() {
 
       async function startCheckout(which:'single'|'bundle') {
         try {
+          localStorage.setItem('last_credit_source', 'sop');
           const resp = await fetch('/api/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -668,12 +640,37 @@ export default function Page() {
         }
       }
 
-      document.getElementById('buyOneBtn')?.addEventListener('click', () => startCheckout('single'))
-      document.getElementById('buyPackBtn')?.addEventListener('click', () => startCheckout('bundle'))
+      // ======== SOP BUY MODAL (like visa) ========
+      const sopModalBackdrop = document.getElementById('sopBuyModalBackdrop')
+      const sopModal = document.getElementById('sopBuyModal')
 
-      // SOP Submit
+      function openSopBuyModal() {
+        if (sopModalBackdrop) (sopModalBackdrop as HTMLElement).style.display = 'block'
+        if (sopModal) (sopModal as HTMLElement).style.display = 'flex'   // 👈 center like visa
+      }
+      function closeSopBuyModal() {
+        if (sopModalBackdrop) (sopModalBackdrop as HTMLElement).style.display = 'none'
+        if (sopModal) (sopModal as HTMLElement).style.display = 'none'
+      }
+
+      document.getElementById('sopModalClose')?.addEventListener('click', closeSopBuyModal)
+      sopModalBackdrop?.addEventListener('click', closeSopBuyModal)
+
+      document.getElementById('sopModalBuyOne')?.addEventListener('click', () => {
+        startCheckout('single')
+      })
+      document.getElementById('sopModalBuyPack')?.addEventListener('click', () => {
+        startCheckout('bundle')
+      })
+
+      // SOP Submit + Buy button
       const sopSubmitBtn = document.getElementById('sop_submit') as HTMLButtonElement | null
       const sopMsg = document.getElementById('sop_msg') as HTMLElement | null
+      const sopBuyBtn = document.getElementById('sop_buy') as HTMLButtonElement | null
+
+      sopBuyBtn?.addEventListener('click', () => {
+        openSopBuyModal()
+      })
 
       sopSubmitBtn?.addEventListener('click', async () => {
         const uni = (document.getElementById('sop_uni') as HTMLInputElement)?.value.trim()
@@ -694,21 +691,7 @@ export default function Page() {
         const bal = await getCredits()
         if (bal < SOP_PRICE) {
           if (sopMsg) {
-            sopMsg.innerHTML = `You need ${SOP_PRICE} credit. Balance: ${bal}.`
-            const inline = document.createElement('div')
-            inline.className = 'purchase-bar'
-            inline.innerHTML = `
-              <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
-                <div style="display:flex; gap:8px;">
-                  <button class="btn btn-success" id="buyInlineOne">Buy 1 SOP</button>
-                  <button class="btn btn-success" id="buyInlinePack">Buy 4 SOPs</button>
-                </div>
-                <div class="tiny-note">(1 SOP credit = $10 · Bundle: 4 for $30)</div>
-              </div>
-            `
-            sopMsg.appendChild(inline)
-            document.getElementById('buyInlineOne')?.addEventListener('click', () => startCheckout('single'))
-            document.getElementById('buyInlinePack')?.addEventListener('click', () => startCheckout('bundle'))
+            sopMsg.innerHTML = `You don’t have enough credits to generate an SOP. Please click <strong>Buy credits</strong> to purchase.`
           }
           return
         }
@@ -819,7 +802,6 @@ export default function Page() {
 
   return (
     <main style={{ maxWidth: 1100, margin: '24px auto', padding: '0 16px', fontFamily: 'system-ui, Arial, sans-serif' }}>
-      {/* Your original CSS kept inline for now (easy to move out later) */}
       <style>{`
         header { display:flex; justify-content:space-between; align-items:center; margin:12px 0; padding:8px 0; border-bottom:1px solid #eee; }
         .muted { color:#666; font-size: 13px; }
@@ -892,12 +874,72 @@ export default function Page() {
         @keyframes blink { 50% { opacity: 0; } }
 
         .purchase-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px; }
-        .price-chip { border:1px solid #ddd; border-radius:10px; padding:8px 10px; background:#f9fafb; }
         .tiny-note { font-size:12px; color:#666; }
-        details.config { margin-top:8px; } details.config summary { cursor:pointer; color:#0a58ca; }
-        .cfg-input { width:280px; }
 
         .sop-header-line { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+
+        /* modal */
+        #sopBuyModalBackdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,.4);
+          display: none;
+          z-index: 1000;
+        }
+        #sopBuyModal {
+          position: fixed;
+          inset: 0;
+          display: none;           /* default: hidden */
+          z-index: 1001;
+          align-items: center;     /* for centering */
+          justify-content: center; /* for centering */
+        }
+        #sopBuyModal .modal-box {
+          background: #fff;
+          border-radius: 12px;
+          padding: 18px 20px 16px;
+          width: min(420px, 92vw);
+          box-shadow: 0 18px 50px rgba(15, 23, 42, .15);
+        }
+        #sopBuyModal h3 {
+          margin: 0 0 4px;
+        }
+        #sopBuyModal .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        #sopModalClose {
+          background: transparent;
+          border: none;
+          font-size: 13px;
+          color: #555;
+          cursor: pointer;
+        }
+        .price-options {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 10px;
+        }
+        .price-option {
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 10px 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+        }
+        .price-title {
+          font-weight: 500;
+          color: #111;
+        }
+        .price-sub {
+          font-size: 12px;
+          color: #666;
+        }
       `}</style>
 
       {/* ===== Header ===== */}
@@ -1120,6 +1162,7 @@ export default function Page() {
 
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                 <button id="sop_submit" className="btn btn-primary">Continue</button>
+                <button id="sop_buy" className="btn btn-success" type="button">Buy credits</button>
                 <div id="sop_msg" className="muted" />
               </div>
 
@@ -1154,6 +1197,36 @@ export default function Page() {
         © 2025 Study Advisor Hub · Contact us at{' '}
         <a href="mailto:contact@studyadvisorhub.com">contact@studyadvisorhub.com</a>
       </footer>
+
+      {/* ====== SOP BUY MODAL (reused style like visa) ====== */}
+      <div id="sopBuyModalBackdrop"></div>
+      <div id="sopBuyModal">
+        <div className="modal-box">
+          <h3>Buy credits</h3>
+          <p className="muted" style={{ marginBottom: 6 }}>
+            These credits can be used for <strong>SOP generation</strong> and <strong>Visa mock interviews</strong>.
+          </p>
+          <div className="price-options">
+            <div className="price-option">
+              <div>
+                <div className="price-title">Buy 1 credit</div>
+                <div className="price-sub">$10 — good for 1 SOP</div>
+              </div>
+              <button id="sopModalBuyOne" className="btn btn-success">Buy $10</button>
+            </div>
+            <div className="price-option">
+              <div>
+                <div className="price-title">Buy 4 credits</div>
+                <div className="price-sub">$30 — save $10</div>
+              </div>
+              <button id="sopModalBuyPack" className="btn btn-success">Buy $30</button>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button id="sopModalClose">Close</button>
+          </div>
+        </div>
+      </div>
     </main>
   )
 }
