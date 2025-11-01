@@ -1,4 +1,4 @@
-// app/api/visa/mock/finish/route.ts
+// app/api/visa/live/end/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
@@ -60,9 +60,13 @@ export async function POST(req: Request) {
       .select("*")
       .eq("id", sessionId)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle(); // 👈 safer than .single()
 
-    if (sesErr || !session) {
+    if (sesErr) {
+      console.error("visa/live/end: session load error", sesErr);
+      return NextResponse.json({ error: sesErr.message }, { status: 500 });
+    }
+    if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
@@ -70,6 +74,7 @@ export async function POST(req: Request) {
     if (session.status === "completed" && session.feedback_json) {
       return NextResponse.json(
         {
+          mode: "live",
           feedback: session.feedback_json,
         },
         { status: 200 }
@@ -84,50 +89,47 @@ export async function POST(req: Request) {
       .order("turn_no", { ascending: true });
 
     if (turnsErr) {
-      console.error("finish: turnsErr", turnsErr);
+      console.error("visa/live/end: turnsErr", turnsErr);
       return NextResponse.json(
         { error: "Could not load turns to generate feedback" },
         { status: 500 }
       );
     }
 
-    // if no turns, nothing to summarize
+    // 4a) no turns → finish with canned feedback
     if (!turns || turns.length === 0) {
       const endedAt = new Date().toISOString();
+      const emptyFeedback = {
+        overall: "Interview finished, but there were no turns to analyze.",
+        strengths: [],
+        improvements: [],
+        example_rewrite: "",
+        total_turns: 0,
+        ended_at: endedAt,
+      };
+
+      // best-effort save
       await supabase
         .from("visa_mock_sessions")
         .update({
           status: "completed",
           ended_at: endedAt,
           total_turns: 0,
-          feedback_json: {
-            overall: "Interview finished, but there were no turns to analyze.",
-            strengths: [],
-            improvements: [],
-            example_rewrite: "",
-            total_turns: 0,
-            ended_at: endedAt,
-          },
+          feedback_json: emptyFeedback,
         })
         .eq("id", sessionId)
         .eq("user_id", user.id);
 
       return NextResponse.json(
         {
-          feedback: {
-            overall: "Interview finished, but there were no turns to analyze.",
-            strengths: [],
-            improvements: [],
-            example_rewrite: "",
-            total_turns: 0,
-            ended_at: endedAt,
-          },
+          mode: "live",
+          feedback: emptyFeedback,
         },
         { status: 200 }
       );
     }
 
-    // 4) make compact transcript
+    // 4b) make compact transcript
     const transcript = turns
       .map((t) => {
         return `Officer: ${t.ai_text || ""}\nCandidate: ${t.user_text || ""}`;
@@ -143,7 +145,7 @@ export async function POST(req: Request) {
       },
       {
         role: "user",
-        content: `Here is the full mock interview transcript (officer question + candidate answer). Please analyze:
+        content: `Here is the full interview transcript (officer question + candidate answer). Please analyze:
 
 ${transcript}
 
@@ -161,22 +163,19 @@ Return JSON only.`,
       });
 
       const raw = completion.choices[0]?.message?.content?.trim() || "";
-
       try {
-        // prefer valid JSON
         structured = JSON.parse(raw);
       } catch {
-        // fallback to raw text
         structured = { raw };
       }
     } catch (llmErr: any) {
-      console.error("finish: openai error", llmErr);
+      console.error("visa/live/end: openai error", llmErr);
       structured = {
         raw: "Could not generate AI feedback at this time.",
       };
     }
 
-    // 5b) normalize into a predictable shape
+    // 6) normalize
     const endedAt = new Date().toISOString();
     const safeFeedback = {
       overall:
@@ -196,7 +195,7 @@ Return JSON only.`,
       ended_at: endedAt,
     };
 
-    // 6) save back to session (scoped to user)
+    // 7) save back to session (best effort)
     const { error: updErr } = await supabase
       .from("visa_mock_sessions")
       .update({
@@ -209,10 +208,11 @@ Return JSON only.`,
       .eq("user_id", user.id);
 
     if (updErr) {
-      console.error("finish: update error", updErr);
-      // even if DB update fails, return the structured feedback so UI can show it
+      console.error("visa/live/end: update error", updErr);
+      // still return feedback to UI
       return NextResponse.json(
         {
+          mode: "live",
           feedback: safeFeedback,
           warning: "Feedback generated but not saved to DB.",
         },
@@ -220,15 +220,16 @@ Return JSON only.`,
       );
     }
 
-    // 7) return to client
+    // 8) return to client
     return NextResponse.json(
       {
+        mode: "live",
         feedback: safeFeedback,
       },
       { status: 200 }
     );
   } catch (err: any) {
-    console.error("visa/mock/finish error:", err);
+    console.error("visa/live/end error:", err);
     return NextResponse.json(
       {
         error: err?.message || "Server error",

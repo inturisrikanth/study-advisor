@@ -1,4 +1,4 @@
-// app/api/visa/mock/session/route.ts
+// app/api/visa/live/token/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
@@ -23,6 +23,11 @@ function getSupabaseFromReq(req: Request) {
   return createRouteHandlerClient({ cookies });
 }
 
+/**
+ * Temporary placeholder route.
+ * Later this will create an OpenAI Realtime session and return its token.
+ * For now it just checks auth + session and returns a dummy token object.
+ */
 export async function GET(req: Request) {
   try {
     const supabase = getSupabaseFromReq(req);
@@ -33,56 +38,43 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
     }
 
-    // auth
+    // 1) Authenticate user
     const {
       data: { user },
+      error: userErr,
     } = await supabase.auth.getUser();
-    if (!user) {
+    if (userErr || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // load session – scoped to user
+    // 2) Verify session belongs to user and is active
     const { data: session, error: sesErr } = await supabase
       .from("visa_mock_sessions")
-      .select("*")
+      .select("id, status")
       .eq("id", sessionId)
       .eq("user_id", user.id)
       .single();
 
     if (sesErr || !session) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // load turns
-    const { data: turns, error: tErr } = await supabase
-      .from("visa_mock_turns")
-      .select("id, turn_no, user_text, ai_text, question_key, created_at")
-      .eq("session_id", sessionId)
-      .order("turn_no", { ascending: true });
-
-    if (tErr) {
-      return NextResponse.json({ error: "Failed to load turns" }, { status: 500 });
+    if (session.status !== "active") {
+      return NextResponse.json({ error: "Session not active" }, { status: 400 });
     }
 
-    // normalize feedback for the UI
-    const feedback =
-      session.feedback_json && typeof session.feedback_json === "object"
-        ? session.feedback_json
-        : null;
+    // 3) Return a placeholder "token" for frontend testing
+    const fakeToken = {
+      token: "dummy-live-token",
+      expires_in: 3600, // 1 hour
+      user_id: user.id,
+      session_id: sessionId,
+      mode: "live",
+    };
 
-    // can the user resume?
-    const canResume = session.status === "active";
-
-    return NextResponse.json({
-      session: {
-        ...session,
-        feedback_json: feedback,
-      },
-      turns: turns ?? [],
-      canResume,
-    });
+    return NextResponse.json(fakeToken, { status: 200 });
   } catch (err: any) {
-    console.error("visa/mock/session error:", err);
+    console.error("visa/live/token error:", err);
     return NextResponse.json(
       { error: err.message ?? "Server error" },
       { status: 500 }
