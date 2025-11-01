@@ -20,6 +20,7 @@ const TAB_STORAGE_KEY = 'visa_active_tab_v1'
 const PRACTICE_KEY = 'visa_practiced_ids_v1'
 const INTERVIEW_PRICE_CREDITS = 2
 const FEEDBACK_STORAGE_KEY = 'visa_live_last_feedback'
+const SESSION_KEY = 'visaSessionId'
 
 export default function VisaGuidancePage() {
   // 1) auth gate
@@ -169,6 +170,33 @@ export default function VisaGuidancePage() {
       }
     }
   }, [])
+
+  // 7) Phase 2 resume / start-new logic (NEW)
+  // three states:
+  // - 'checking'      -> we are checking localStorage
+  // - 'choice'        -> there is an active session, show "resume or start new"
+  // - 'panel'         -> show <VisaLivePanel/>
+  const [phase2View, setPhase2View] = useState<'checking' | 'choice' | 'panel'>('checking')
+
+  // check once on load
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = localStorage.getItem(SESSION_KEY)
+    if (stored) {
+      setPhase2View('choice')
+    } else {
+      setPhase2View('panel')
+    }
+  }, [])
+
+  // also check when user switches to phase2
+  useEffect(() => {
+    if (tab !== 'phase2') return
+    if (typeof window === 'undefined') return
+    const stored = localStorage.getItem(SESSION_KEY)
+    if (stored) setPhase2View('choice')
+    else setPhase2View('panel')
+  }, [tab])
 
   // ================== Phase 1 content (restored) ==================
   const PhaseOneContent = (
@@ -338,17 +366,43 @@ export default function VisaGuidancePage() {
         Practice a realistic F-1 visa interview with an AI officer. Your last feedback (if any) will stay below.
       </p>
 
-      {/* the actual chat / start / finish */}
-      <VisaLivePanel
-        onFeedback={(fb) => {
-          setLastFeedback(fb)
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(fb))
-          }
-        }}
-        onCreditsChange={(n) => setCredits(n)}
-        onBuyCredits={() => setShowBuyModal(true)}
-      />
+      {/* NEW: resume-or-start screen */}
+      {phase2View === 'choice' ? (
+        <div className="banner-warn" style={{ marginBottom: 12 }}>
+          <p style={{ margin: '0 0 6px' }}>You have an interview in progress.</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn primary" onClick={() => setPhase2View('panel')}>
+              Resume interview
+            </button>
+            <button
+              className="btn"
+              onClick={() => {
+                // clear active session and start fresh
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem(SESSION_KEY)
+                }
+                setPhase2View('panel')
+              }}
+            >
+              Start new interview
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* actual chat panel */}
+      {phase2View === 'panel' ? (
+        <VisaLivePanel
+          onFeedback={(fb) => {
+            setLastFeedback(fb)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(fb))
+            }
+          }}
+          onCreditsChange={(n) => setCredits(n)}
+          onBuyCredits={() => setShowBuyModal(true)}
+        />
+      ) : null}
 
       {/* persistent FEEDBACK block */}
       <div className="panel" style={{ marginTop: 16 }}>
@@ -459,7 +513,7 @@ export default function VisaGuidancePage() {
   )
 }
 
-/* ------------- small UI bits ------------- */
+/* ----------------------------- Small UI bits ----------------------------- */
 function CreditsPill({ credits, onClick }: { credits: number | null; onClick: () => void }) {
   return (
     <button
@@ -563,6 +617,7 @@ aside.local-rail { width: 240px; border-right: 1px solid #eee; padding-right: 12
 .copy-btn { padding:6px 8px; border:1px solid #ccc; background:#fff; border-radius:6px; cursor:pointer; }
 .check { display:inline-flex; align-items:center; gap:6px; }
 .banner-ok { background:#eaf7ef; border:1px solid #cfe7da; color:#0f5132; border-radius:10px; padding:10px 12px; margin:10px 0; }
+.banner-warn { background:#fff7e6; border:1px solid #ffe8b0; color:#7a4d00; border-radius:10px; padding:10px 12px; margin:10px 0; }
 .top-link { text-decoration:none; }
 .panel { border:1px solid #eee; border-radius:10px; padding:10px; background:#fff; }
 

@@ -1,4 +1,3 @@
-// app/app/visa/hooks/useVisaLive.ts
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -24,7 +23,6 @@ export type Turn = {
 }
 
 const SESSION_KEY = 'visaSessionId'
-const FEEDBACK_KEY = 'visaLastFeedback_v1'
 
 function newClientTurnToken() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
@@ -67,102 +65,56 @@ export function useVisaLive() {
   const [credits, setCredits] = useState<number | null>(null)
   const [finishing, setFinishing] = useState(false)
 
-  // load credits + last feedback + maybe restore session
+  // NEW: to show “resume vs start”
+  const [hasStoredActiveSession, setHasStoredActiveSession] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
+
+  // load credits once
   useEffect(() => {
     ;(async () => {
-      // credits
       try {
         const c = await getMyCredits()
         setCredits(c)
       } catch {
         setCredits(0)
       }
-
-      // last feedback
-      if (typeof window !== 'undefined') {
-        const saved = window.localStorage.getItem(FEEDBACK_KEY)
-        if (saved) {
-          try {
-            setFeedback(JSON.parse(saved))
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-
-      // restore active session (if any)
-      if (typeof window !== 'undefined') {
-        const stored = window.localStorage.getItem(SESSION_KEY)
-        if (stored) {
-          try {
-            const res = await getJSON<{ session: any; turns: Turn[] }>(`/api/visa/live/session?sessionId=${stored}`)
-            if (res.session?.status === 'active') {
-              setSessionId(res.session.id)
-              setTurns(res.turns || [])
-            } else {
-              // session is done – clear key, but keep feedback from DB if present
-              window.localStorage.removeItem(SESSION_KEY)
-              if (res.session?.feedback_json) {
-                setFeedback(res.session.feedback_json)
-                window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify(res.session.feedback_json))
-              }
-            }
-          } catch {
-            window.localStorage.removeItem(SESSION_KEY)
-          }
-        }
-      }
     })()
   }, [])
 
-  // start
+  // start interview
   const startInterview = useCallback(async () => {
     setError(null)
     setLoading(true)
     try {
-        const res = await postJSON<{ sessionId: string; remainingCredits: number }>('/api/visa/live/start')
-
-        // remember active session
-        if (typeof window !== 'undefined') {
-        localStorage.setItem('visaSessionId', res.sessionId)
-        }
-
-        setSessionId(res.sessionId)
-        setCredits(res.remainingCredits)
-        setTurns([])
-        setFeedback(null)
+      const res = await postJSON<{ sessionId: string; remainingCredits: number }>('/api/visa/live/start')
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_KEY, res.sessionId)
+      }
+      setSessionId(res.sessionId)
+      setCredits(res.remainingCredits)
+      setTurns([])
+      setFeedback(null)
+      setHasStoredActiveSession(false)
     } catch (e: any) {
-        // 👇 nicer message for no credits
-        if (e?.status === 402 || e?.data === 'INSUFFICIENT_CREDITS' || e?.message === 'INSUFFICIENT_CREDITS') {
-        setError('You don’t have enough credits for this interview. Please buy enough credits and try again.')
-        } else {
-        setError(e?.message || 'Could not start interview.')
-        }
+      setError(e?.message || 'Could not start interview.')
     } finally {
-        setLoading(false)
+      setLoading(false)
     }
-    }, [])
+  }, [])
 
-  // finish
+  // finish interview
   const finishInterview = useCallback(async () => {
     if (!sessionId) return
     setFinishing(true)
     try {
       const res = await postJSON<{ feedback?: VisaFeedback }>('/api/visa/live/end', { sessionId })
-
-      if (res.feedback) {
-        setFeedback(res.feedback)
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(FEEDBACK_KEY, JSON.stringify(res.feedback))
-        }
-      }
-
-      // interview is done → clear active session
+      if (res.feedback) setFeedback(res.feedback)
+      // clear from storage, but KEEP feedback in state
       if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(SESSION_KEY)
+        localStorage.removeItem(SESSION_KEY)
       }
-      setSessionId(null)
-      setTurns([])
+      setHasStoredActiveSession(false)
+      // we keep sessionId so chat UI can still show old turns if needed
     } catch (e: any) {
       setError(e?.message || 'Failed to finish interview.')
     } finally {
@@ -183,12 +135,10 @@ export function useVisaLive() {
           '/api/visa/live/turn',
           { sessionId, userText: trimmed, clientTurnToken: token },
         )
-
         setTurns((prev) => [
           ...prev,
           { turn_no: res.turnNo, user_text: trimmed, ai_text: res.aiText, created_at: new Date().toISOString() },
         ])
-
         if (res.done) {
           await finishInterview()
         }
@@ -201,7 +151,57 @@ export function useVisaLive() {
     [sessionId, finishInterview],
   )
 
+  // hydrate
+  useEffect(() => {
+    ;(async () => {
+      if (typeof window === 'undefined') return
+      const stored = localStorage.getItem(SESSION_KEY)
+      if (!stored) {
+        setHydrated(true)
+        return
+      }
+
+      try {
+        const res = await getJSON<{ session: any; turns: Turn[] }>(`/api/visa/live/session?sessionId=${stored}`)
+        const status = res.session?.status
+        if (!status || status === 'completed' || status === 'abandoned') {
+          // old session, drop it
+          localStorage.removeItem(SESSION_KEY)
+          setSessionId(null)
+          setTurns([])
+          setFeedback(res.session?.feedback_json ?? null)
+          setHasStoredActiveSession(false)
+        } else {
+          // active -> don't auto-start UI, just tell page there's something to resume
+          setSessionId(res.session.id)
+          setTurns(res.turns || [])
+          setFeedback(res.session.feedback_json ?? null)
+          setHasStoredActiveSession(true)
+        }
+      } catch {
+        localStorage.removeItem(SESSION_KEY)
+        setSessionId(null)
+        setTurns([])
+        setFeedback(null)
+        setHasStoredActiveSession(false)
+      } finally {
+        setHydrated(true)
+      }
+    })()
+  }, [])
+
+  // allow page to drop the stored session (user chose "start new")
+  const clearStoredSession = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(SESSION_KEY)
+    }
+    setHasStoredActiveSession(false)
+    setSessionId(null)
+    setTurns([])
+  }, [])
+
   return {
+    // data
     sessionId,
     turns,
     feedback,
@@ -209,8 +209,15 @@ export function useVisaLive() {
     error,
     loading,
     finishing,
+
+    // actions
     startInterview,
     sendAnswer,
     finishInterview,
+    clearStoredSession,
+
+    // ui state
+    hasStoredActiveSession,
+    hydrated,
   }
 }
